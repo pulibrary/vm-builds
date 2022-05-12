@@ -1,0 +1,4 @@
+python 3.10.4
+awscli 2.6.4
+packer 1.8.0
+gcloud 385.0.0
