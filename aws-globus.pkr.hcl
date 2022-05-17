@@ -121,6 +121,10 @@ build {
     playbook_file = "scripts/dev_user_add.yml"
   }
 
+  provisioner "ansible" {
+    playbook_file = "scripts/globus_install.yml"
+  }
+
   provisioner "shell" {
     execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
     script          = "scripts/cleanup.sh"
