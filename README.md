@@ -16,3 +16,34 @@ The following software programs need to be installed:
     1. [GCP command line interface](https://github.com/jthegedus/asdf-gcloud)
     1. [Packer](https://github.com/asdf-community/asdf-hashicorp)
     1. [Python](https://github.com/danhper/asdf-python)
+
+### Running a packer file
+
+1. Get into the pip shell
+   ```
+   pipenv sync
+   pipenv shell
+   ```
+
+1. set up aws keys
+   ```
+   aws configure
+   ```
+
+3. Update the packer file if needed
+   1. test your packer file
+      ```
+      packer validate <packer file name>
+      ```
+
+   1. Format the file to make sure it looks consistant
+      ```
+      packer fmt <packer file name>
+      ```
+
+1. run you packer file
+   ```
+   packer build <packer file name>
+   ```
+    
+
