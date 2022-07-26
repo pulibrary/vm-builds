@@ -25,7 +25,7 @@ The following software programs need to be installed:
    pipenv shell
    ```
 
-1. set up aws keys
+1. set up aws keys (Access [aws login](https://princeton.edu/aws) and then [IAM](https://us-east-1.console.aws.amazon.com/iamv2/home?region=us-east-1#/users) to create your access key) 
    ```
    aws configure
    ```
