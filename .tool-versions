@@ -1,5 +1,5 @@
-python 3.10.4
-awscli 2.6.4
-packer 1.8.0
-gcloud 385.0.0
-direnv 2.31.0
+python 3.11.1
+awscli 2.9.14
+packer 1.8.5
+gcloud 413.0.0
+direnv 2.32.2
