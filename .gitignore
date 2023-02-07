@@ -6,3 +6,9 @@ crash.log
 
 # For built boxes
 *.box
+# packer files
+ansible.pkrvars.hcl
+build.pkrvars.hcl
+common.pkrvars.hcl
+proxy.pkrvars.hcl
+vsphere.pkrvars.hcl
