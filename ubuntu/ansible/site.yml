@@ -5,8 +5,6 @@
   become: true
   vars_files:
     - ../group_vars/all/main.yml
-  vars_files:
-    - ../group_vars/all/main.yml
 
   tasks:
   # to remove someone's keys from our servers:
@@ -36,4 +34,3 @@
       ansible.builtin.apt:
         upgrade: dist
         force_apt_get: true
-

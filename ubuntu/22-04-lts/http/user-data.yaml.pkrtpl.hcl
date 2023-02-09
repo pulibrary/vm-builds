@@ -1,6 +1,13 @@
 #cloud-config
 autoinstall:
   version: 1
+  early-commands:
+  # If we install the SSH server using the subiquity `ssh` configuration then port 22 gets opened up to packer _before_
+  # the requisite configuration has been done to allow Packer to SSH on to the guest O/S. This results in a failed build
+  # as Packer exceeds its SSH permitted number of SSH handshake attempts.
+  # To ensure this doesn't happen we stop the SSH service until right at the end when we re-enable it
+  # using a late-command.
+  - sudo systemctl stop ssh
   apt:
     conf: |
       Acquire {

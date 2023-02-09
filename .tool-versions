@@ -1,4 +1,4 @@
-python 3.11.1
+python 3.11.2
 awscli 2.9.14
 packer 1.8.5
 gcloud 416.0.0

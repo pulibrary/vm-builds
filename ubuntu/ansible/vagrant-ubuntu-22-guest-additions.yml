@@ -1,0 +1,43 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    mountDir: /vbox
+
+  tasks:
+  - name: create a temporary mount point for vbox guest additions  
+    file:
+      path: "{{ mountDir }}"
+      state: directory
+      
+  # as per `guest_additions_path` in Packer's configuration file
+  - name: mount guest additions ISO read-only
+    mount:
+      path: "{{ mountDir }}"
+      src: /home/vagrant/VBoxGuestAdditions.iso
+      fstype: iso9660
+      opts: ro
+      state: mounted
+
+  # in case running kernel modules are detected using `failed_when` can prevent an error
+  - name: execute guest additions script
+    command: "{{ mountDir }}/VBoxLinuxAdditions.run"
+    register: modules
+    failed_when: 
+    - modules.rc != 0
+    - modules.rc != 2
+
+  - name: unmount guest additions ISO
+    mount:
+      path: "{{ mountDir }}"
+      state: absent
+
+  - name: remove the temporary mount point  
+    file:
+      path: "{{ mountDir }}"
+      state: absent
+
+  - name: upgrade all packages
+    apt:
+      name: '*'
+      state: latest
