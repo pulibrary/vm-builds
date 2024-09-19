@@ -1,0 +1,6 @@
+[tools]
+python = "3.11.1"
+packer = "1.11.2"
+[settings]
+python_venv_auto_create = true
+experimental = true
