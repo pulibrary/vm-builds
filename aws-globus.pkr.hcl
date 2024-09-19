@@ -61,7 +61,7 @@ variable "username" {
 # https://www.packer.io/docs/templates/hcl_templates/blocks/data
 # Read the documentation for the Amazon AMI Data Source here:
 # https://www.packer.io/docs/datasources/amazon/ami
-data "amazon-ami" "ubuntu-focal" {
+data "amazon-ami" "ubuntu-jammy" {
   access_key = "${var.aws_access_key}"
   filters = {
     name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
@@ -80,13 +80,13 @@ locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 # source. Read the documentation for source blocks here:
 # this is for a globus VM only. to generalize remove globus below
 # https://www.packer.io/docs/templates/hcl_templates/blocks/source
-source "amazon-ebs" "ubuntu-focal" {
+source "amazon-ebs" "ubuntu-jammy" {
   access_key     = "${var.aws_access_key}"
   ami_name       = "ubuntu-globus-ami-pul_${local.timestamp}"
   instance_type  = "${var.instance_type}"
   region         = "${var.aws_region}"
   secret_key     = "${var.aws_secret_key}"
-  source_ami     = "${data.amazon-ami.ubuntu-focal.id}"
+  source_ami     = "${data.amazon-ami.ubuntu-jammy.id}"
   ssh_username   = "pulsys"
   user_data_file = "./config/defaults.cfg"
 }
