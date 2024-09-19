@@ -64,7 +64,7 @@ variable "username" {
 data "amazon-ami" "ubuntu-focal" {
   access_key = "${var.aws_access_key}"
   filters = {
-    name                = "ubuntu/images/*ubuntu-focal-20.04-amd64-server-*"
+    name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
@@ -95,7 +95,7 @@ source "amazon-ebs" "ubuntu-focal" {
 # documentation for build blocks can be found here:
 # https://www.packer.io/docs/templates/hcl_templates/blocks/build
 build {
-  sources = ["source.amazon-ebs.ubuntu-focal"]
+  sources = ["source.amazon-ebs.ubuntu-jammy"]
 
   provisioner "file" {
     destination = "/tmp/defaults.cfg"
