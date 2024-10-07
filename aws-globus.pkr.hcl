@@ -117,11 +117,11 @@ build {
     script          = "scripts/setup.sh"
   }
 
-  provisioner "ansible" {
+  provisioner "ansible-local" {
     playbook_file = "scripts/dev_user_add.yml"
   }
 
-  provisioner "ansible" {
+  provisioner "ansible-local" {
     playbook_file = "scripts/globus_install.yml"
   }
 
