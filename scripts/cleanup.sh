@@ -1,16 +1,15 @@
-#!/bin/bash -eux
+#!/usr/bin/bash -eux
 
 SSH_USER=${SSH_USERNAME:-pulsys}
 
 # Apt cleanup.
 echo "==> Autoremove clean"
+apt -y purge ansible
 apt autoremove
 apt update
 
-
 echo "==> Cleaning up tmp"
 rm -rf /tmp/*
-
 
 # Remove Bash history
 unset HISTFILE
