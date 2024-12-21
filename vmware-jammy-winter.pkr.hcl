@@ -1,3 +1,12 @@
+packer {
+  required_plugins {
+    vmware = {
+      version = ">= 1.0.0"
+      source = "github.com/hashicorp/vmware"
+    }
+  }
+}
+
 variable "github_users" {
   default = ["acozine", "aruiz1789", "beck-davis", "dphillips-39", "kayiwa", "vickiekarasic"]
 }
