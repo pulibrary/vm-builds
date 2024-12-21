@@ -16,27 +16,17 @@ source "qemu" "ubuntu" {
   memory           = 8196
   cpus             = 2
   shutdown_command = "echo 'pulsys' | sudo -S shutdown -P now"
-}
+  boot_wait        = "30s"
 
-source "vmware-iso" "ubuntu" {
-  iso_url              = "https://releases.ubuntu.com/22.04/ubuntu-22.04.5-live-server-amd64.iso"
-  iso_checksum         = "sha256:9bc6028870aef3f74f4e16b900008179e78b130e6b0b9a140635434a46aa98b0"
-  communicator         = "ssh"
-  ssh_username         = "pulsys"
-  ssh_private_key_file = "${path.root}/ansible_tower_private_key"
+  qemuargs = [
+    ["-display", "none"]
+  ]
 
-  vm_name          = "ubuntu-jammy-vmware"
-  output_directory = "output-vmware-ubuntu-jammy"
-
-  guest_os_type    = "ubuntu-64"
-  disk_size        = 30720
-  memory           = 8196
-  cpus             = 2
-  shutdown_command = "echo 'pulsys' | sudo -S shutdown -P now"
+  ssh_wait_timeout = "30m"
 }
 
 build {
-  sources = ["source.qemu.ubuntu", "source.vmware-iso.ubuntu"]
+  sources = ["source.qemu.ubuntu"]
 
   provisioner "shell" {
     inline = [
@@ -61,18 +51,19 @@ build {
   provisioner "file" {
     destination = "/tmp/authorized_keys"
     content     = <<EOF
-%{for user in var.github_users}
+%{for user in var.github_users~}
 $(curl -s https://github.com/${user}.keys)
-%{endfor}
+%{endfor~}
 EOF
   }
 
   provisioner "shell" {
     inline = [
-      "cat /tmp/authorized_keys > /home/pulsys/.ssh/authorized_keys",
+      "cat /tmp/authorized_keys >> /home/pulsys/.ssh/authorized_keys",
       "chmod 600 /home/pulsys/.ssh/authorized_keys",
       "chown -R pulsys:pulsys /home/pulsys/.ssh",
-      "rm /tmp/authorized_keys"
+      "rm /tmp/authorized_keys",
+      "sleep 600" # Debug sleep
     ]
   }
 }
