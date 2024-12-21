@@ -63,7 +63,49 @@ EOF
       "chmod 600 /home/pulsys/.ssh/authorized_keys",
       "chown -R pulsys:pulsys /home/pulsys/.ssh",
       "rm /tmp/authorized_keys",
-      "sleep 600" # Debug sleep
+      "sleep 600", # Debug sleep
+      "apt-get update && apt-get upgrade -y",
+      "apt-get install -y openssh-server curl",
+
+      # Create the 'pulsys' user
+      "adduser --disabled-password --gecos '' pulsys",
+      "usermod -aG sudo pulsys",
+
+      # Configure sudoers with NOPASSWD
+      "echo 'pulsys ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/pulsys",
+      "chmod 440 /etc/sudoers.d/pulsys",
+
+      # Setup .ssh directory for key-based authentication
+      "mkdir -p /home/pulsys/.ssh",
+      "chmod 700 /home/pulsys/.ssh"
+    ]
+  }
+
+  provisioner "file" {
+    content     = <<EOF
+%{for user in var.github_users~}
+$(curl -s https://github.com/${user}.keys)
+%{endfor~}
+EOF
+    destination = "/tmp/authorized_keys"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "cat /tmp/authorized_keys >> /home/pulsys/.ssh/authorized_keys",
+      "chmod 600 /home/pulsys/.ssh/authorized_keys",
+      "chown -R pulsys:pulsys /home/pulsys/.ssh",
+      "rm /tmp/authorized_keys"
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "echo 'Provisioning debug:'",
+      "id pulsys",
+      "ls -la /home/pulsys/.ssh",
+      "cat /home/pulsys/.ssh/authorized_keys || echo 'No keys found'",
+      "sleep 600"
     ]
   }
 }
