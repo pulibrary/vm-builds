@@ -31,10 +31,10 @@ To simply validate `cloud-init` against all distros
 make validate-cloudinit
 ```
 
-To validate `cloud-init` configuration of a specific distro (`focal`, `jammy`, `noble`)
+To validate `cloud-init` configuration of a specific distro (`jammy`)
 
 ```bash
-make validate-cloudinit-<distroname> # <distroname> here is either focal, jammy or noble
+make validate-cloudinit-jammy # <distroname> currently only jammy
 ```
 
 To simply validate `ubuntu.pkr.hcl` template against all distros
