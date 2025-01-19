@@ -1,49 +1,52 @@
 # vm-builds
-Build our Virtual Machines
+Packer templates for creating Server Images with Packer + QEMU + Autoinstall (cloud-init)
 
-## Overview
+## Cloud Init
 
-This repository uses [Packer](https://www.packer.io/) to build a virtual machines for
-VSphere, Google Cloud, Azure or AWS AMI.
+[Cloud-Init](https://cloud-init.io) will need to be installed
+[QEMU](https://qemu.org) Quick Emulator will also need to be installed
 
-### Prerequisite software
+Currently Supported Images:
 
-The following software programs need to be installed:
+| Name                | Version       |
+|:--------------------|:-------------:|
+| __Jammy Jellyfish__ |     `22.04.4` |
 
-1. [asdf](https://github.com/asdf-vm/asdf)
-1. Builders (not all may be needed):
-    1. [AWS command line interface](https://github.com/MetricMike/asdf-awscli)
-    1. [GCP command line interface](https://github.com/jthegedus/asdf-gcloud)
-    1. [Packer](https://github.com/asdf-community/asdf-hashicorp)
-    1. [Python](https://github.com/danhper/asdf-python)
 
-### Running a packer file
+## Usage
 
-1. Get into the pip shell
-   ```
-   pipenv sync
-   pipenv shell
-   ```
+Use GNU-Make to perform validation / build images:
 
-1. set up aws keys (Access [aws login](https://princeton.edu/aws) and then [IAM](https://us-east-1.console.aws.amazon.com/iamv2/home?region=us-east-1#/users) to create your access key) 
-   ```
-   aws configure
-   ```
+### Validation
 
-3. Update the packer file if needed
-   1. test your packer file
-      ```
-      packer validate <packer file name>
-      ```
+To validate `cloud-init` and `ubuntu.pkr.hcl` template perform
 
-   1. Format the file to make sure it looks consistant
-      ```
-      packer fmt <packer file name>
-      ```
+```bash
+make validate
+```
 
-1. run you packer file
-   ```
-   packer build <packer file name>
-   ```
-    
+To simply validate `cloud-init` against all distros
 
+```bash
+make validate-cloudinit
+```
+
+To validate `cloud-init` configuration of a specific distro (`focal`, `jammy`, `noble`)
+
+```bash
+make validate-cloudinit-<distroname> # <distroname> here is either focal, jammy or noble
+```
+
+To simply validate `ubuntu.pkr.hcl` template against all distros
+
+```bash
+make validate-packer
+```
+
+### Build Images
+
+to build Ubuntu 22.04 (Jammy) image
+
+```bash
+make build-jammy
+```

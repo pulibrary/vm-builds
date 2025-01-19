@@ -1,30 +1,27 @@
 #cloud-config
 autoinstall:
   version: 1
-  identity:
-    hostname: lib-vm
-    username: pulsys
-    password: "$6$rounds=4096$6$0g.mbq.Db3ElOUit$LgWbFqzj9qrmi5.u4AHkf2UP1iorhnetqSczPK2GhkOFtVK2.XesM7iqumrd6OJE6IRZmvDXdGgk5/PtOU3L31"
-  early-commands:
-    - systemctl stop ssh
-  network:
-    network:
-      version: 2
-      ethernets:
-        eth0:
-          dhcp4: true
-  packages:
-    - openssh-server
-    - curl
+  locale: en_US
+  keyboard:
+    layout: us
   ssh:
     install-server: true
     allow-pw: true
   late-commands:
-    - 'sed -i "s/^#*\(PermitRootLogin\) .*/\1 no/" /target/etc/ssh/sshd_config'
-    - 'sed -i "s/^#*\(PasswordAuthentication\) .*/\1 yes/" /target/etc/ssh/sshd_config'
-    - 'echo "pulsys ALL=(ALL) NOPASSWD:ALL" > /target/etc/sudoers.d/pulsys'
-    - 'chmod 440 /target/etc/sudoers.d/pulsys'
-    - 'mkdir -p /target/home/pulsys/.ssh'
-    - 'chmod 700 /target/home/pulsys/.ssh'
-    - 'chown -R pulsys:pulsys /target/home/pulsys/.ssh'
-    - systemctl enable ssh
+    - |
+      if [ -d /sys/firmware/efi ]; then
+        apt-get install -y efibootmgr
+        efibootmgr -o $(efibootmgr | perl -n -e '/Boot(.+)\* ubuntu/ && print $1')
+      fi
+  user-data:
+    preserve_hostname: false
+    hostname: lib-vm
+    package_upgrade: true
+    timezone: America/New_York
+    users:
+      - name: pulsys
+        passwd: $6$xyz$/DjDsU5JT6atBHRzRf6RcSQ.usUFOYX9sKv2SD9tBIM331WY.mzWrCuPj9rAi7pu3iOfQAEZ363TqRsK4QfB3/
+        groups: [adm, cdrom, dip, plugdev, lxd, sudo]
+        lock-passwd: false
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
