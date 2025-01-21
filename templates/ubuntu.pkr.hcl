@@ -4,8 +4,14 @@ packer {
       version = ">= 1.0.9"
       source  = "github.com/hashicorp/qemu"
     }
+    ansible = {
+      version = "~> 1"
+      source  = "github.com/hashicorp/ansible"
+    }
+
   }
 }
+
 
 ## Variable will be set via the Command line defined under the `vars` directory
 variable "ubuntu_distro" {
@@ -28,6 +34,11 @@ variable "vm_template_name" {
 variable "host_distro" {
   type    = string
   default = "manjaro"
+}
+
+variable "username" {
+  type    = string
+  default = "pulsys"
 }
 
 locals {
@@ -85,9 +96,25 @@ build {
   name    = "custom_build"
   sources = ["source.qemu.custom_image"]
 
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "scripts/install_tools.sh"
+  }
+
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "scripts/setup.sh"
+  }
+
+
   # initial configuration
   provisioner "ansible-local" {
-    playbook_file = "../scripts/initial_install.yml"
+    playbook_file = "scripts/initial_install.yml"
+  }
+
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "scripts/cleanup.sh"
   }
 
   # Wait till Cloud-Init has finished setting up the image on first-boot
