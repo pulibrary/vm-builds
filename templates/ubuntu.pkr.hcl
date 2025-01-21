@@ -85,6 +85,11 @@ build {
   name    = "custom_build"
   sources = ["source.qemu.custom_image"]
 
+  # initial configuration
+  provisioner "ansible-local" {
+    playbook_file = "../scripts/initial_install.yml"
+  }
+
   # Wait till Cloud-Init has finished setting up the image on first-boot
   provisioner "shell" {
     inline = [

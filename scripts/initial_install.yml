@@ -1,0 +1,49 @@
+---
+- name: build the baseline image
+  hosts: all
+  remote_user: pulsys
+  become: true
+  tasks:
+    - name: Install base tools 
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      loop:
+        - fail2ban
+        - open-vm-tools
+        - vim
+        - wget
+
+    - name: Create Fail2Ban ssh jail
+      ansible.builtin.copy:
+        src: ssh.local
+        dest: /etc/fail2ban/jail.d/ssh.local
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Set vim as default editor
+      ansible.builtin.alternatives:
+        name: editor
+        path: /usr/bin/vim
+
+    - name: Create regenate SSH keys
+      ansible.builtin.copy:
+        src: regenerate_ssh_keys.sh
+        dest: /usr/local/sbin/regenerate_ssh_keys.sh
+        owner: root
+        group: root
+        mode: "0775"
+
+    - name: Create ssh key systemd unit file
+      ansible.builtin.copy:
+        src: regenerate-ssh-keys.service
+        dest: /etc/systemd/system/regenerate-ssh-keys.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Force systemd to reread configs
+      ansible.builtin.systemd_service:
+        daemon_reload: true

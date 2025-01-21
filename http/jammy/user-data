@@ -38,7 +38,7 @@ autoinstall:
       # Configure SSH to only allow pulsys user
       echo "AllowUsers pulsys" >> /target/etc/ssh/sshd_config
       echo "Protocol 2" >> /target/etc/ssh/sshd_config
-      echo "PermitRootLogin no" >> /target/etc/ssh/sshd_config
+      echo "PermitRootLogin prohibit-password" >> /target/etc/ssh/sshd_config
   user-data:
     preserve_hostname: false
     hostname: lib-vm
