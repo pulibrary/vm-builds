@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 .PHONY: build-jammy validate-packer validate-cloudinit validate
 
 TEMPLATE_FILE:=./templates/ubuntu.pkr.hcl
@@ -23,7 +24,6 @@ validate-cloudinit-jammy:
 
 validate-packer: validate-jammy
 
-validate-cloudinit:  validate-cloudinit-jammy
+validate-cloudinit: validate-cloudinit-jammy
 
 validate: validate-cloudinit validate-packer
-
