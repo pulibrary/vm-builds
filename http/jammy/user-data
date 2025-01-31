@@ -1,0 +1,53 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: us
+  ssh:
+    install-server: true
+    allow-pw: true
+  late-commands:
+    - |
+      if [ -d /sys/firmware/efi ]; then
+        apt-get install -y efibootmgr
+        efibootmgr -o $(efibootmgr | perl -n -e '/Boot(.+)\* ubuntu/ && print $1')
+      fi
+    - |
+      # Install curl if not present
+      apt-get update
+      apt-get install -y curl
+    - |
+      # Setup SSH directory with error handling
+      mkdir -p /target/home/pulsys/.ssh || true
+      touch /target/home/pulsys/.ssh/authorized_keys || true
+      # Add Tower key
+      echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBsA+jCMYKyZL4LK0t5w4BOzJoALfEanNUO3VP7brdxZhxcFhZGRwxAy7F81sgg/aqwkNj1Crh1ya52Mpi5BVyAUdkx2H0fBK+Kz+BN95Iu9T9lKN72I4zPr+H2fc+93GQzO8B7zOHDynEnAtK9EO70RFrnWSThOizcJlolBw1x6qJ+a+3XnXHQOX1IrRYYDBNroRaCmM6jX4qPZ9mZ2HN5xG+/5p62RlrJ/Lj1fZL4p5Kf+p7vrR6OhKlPuHAqldWjWVyUuT0YC2EK1o9J43c3r0BkOFxAiGzMEKzGwZLQbRLHLPlDqv5JiN+qoMh8fw8T6jQUH0WdQB/nS4xMFwl ansible-tower" >> /target/home/pulsys/.ssh/authorized_keys || true
+      # Add Ops Keys
+      for user in acozine aruiz1789 beck-davis dphillips-39 kayiwa vickiekarasic; do
+        if curl -s "https://github.com/$user.keys" >> /target/home/pulsys/.ssh/authorized_keys; then
+          echo "Added keys for $user"
+        else
+          echo "Failed to fetch keys for $user, continuing..."
+        fi
+      done
+    - chmod 700 /target/home/pulsys/.ssh || true
+    - chmod 600 /target/home/pulsys/.ssh/authorized_keys || true
+    - chown -R pulsys:pulsys /target/home/pulsys/.ssh || true
+    - |
+      # Configure SSH to only allow pulsys user
+      echo "AllowUsers pulsys" >> /target/etc/ssh/sshd_config
+      echo "Protocol 2" >> /target/etc/ssh/sshd_config
+      echo "PermitRootLogin prohibit-password" >> /target/etc/ssh/sshd_config
+  user-data:
+    preserve_hostname: false
+    hostname: lib-vm
+    package_upgrade: true
+    timezone: America/New_York
+    users:
+      - name: pulsys
+        passwd: $6$xyz$74AlwKA3Z5n2L6ujMzm/zQXHCluA4SRc2mBfO2/O5uUc2yM2n2tnbBMi/IVRLJuKwfjrLZjAT7agVfiK7arSy/
+        groups: [adm, cdrom, dip, plugdev, lxd, sudo]
+        lock-passwd: false
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
