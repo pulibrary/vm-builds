@@ -1,0 +1,6 @@
+[sshd]
+filter = sshd
+action = iptables-multiport
+logpath = /var/log/auth.log
+maxretry = 5
+
