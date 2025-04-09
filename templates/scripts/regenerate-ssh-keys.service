@@ -1,0 +1,11 @@
+[Unit]
+Description=Regenerate SSH keys on first boot
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/regenerate_ssh_keys.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
