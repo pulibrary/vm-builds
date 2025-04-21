@@ -1,52 +1,100 @@
-# vm-builds
-Packer templates for creating Server Images with Packer + QEMU + Autoinstall (cloud-init)
+# VM-Builds
 
-## Cloud Init
+Packer templates for creating server images with:
+- Packer
+- QEMU (for local VM images)
+- AWS (for AMI creation)
+- Autoinstall (cloud-init)
 
-[Cloud-Init](https://cloud-init.io) will need to be installed
-[QEMU](https://qemu.org) Quick Emulator will also need to be installed
+## Requirements
 
-Currently Supported Images:
+- [Packer](https://www.packer.io/) (v1.8.0+)
+- [QEMU](https://www.qemu.org/) (for local VM building)
+- [AWS CLI](https://aws.amazon.com/cli/) (configured with proper credentials for AWS AMI building)
+- [Cloud-Init](https://cloud-init.io/) (for validation, optional)
 
-| Name                | Version       |
-|:--------------------|:-------------:|
-| __Jammy Jellyfish__ |     `22.04.4` |
+## Supported Images
 
+| Distribution | Version | Build Types |
+|:-------------|:-------:|:------------|
+| **Ubuntu Jammy Jellyfish** | `22.04.4` | QEMU, AWS |
+
+.
+├── http/                # Cloud-init configurations
+│   └── jammy/           # Ubuntu 22.04 specific configs
+├── templates/           # Packer template files
+│   ├── qemu-jammy-winter.pkr.hcl  # QEMU template for Ubuntu 22.04
+│   ├── aws-jammy.pkr.hcl          # AWS template for Ubuntu 22.04
+│   └── scripts/         # Provisioning scripts
+└── vars/                # Variable files for templates
+├── jammy.pkrvars.hcl       # QEMU variables
+└── aws-jammy.pkrvars.hcl   # AWS variables
 
 ## Usage
 
-Use GNU-Make to perform validation / build images:
+This project uses GNU-Make to streamline building and validation.
 
 ### Validation
 
-To validate `cloud-init` and `ubuntu.pkr.hcl` template perform
-
+#### Validate All Templates
 ```bash
 make validate
 ```
 
-To simply validate `cloud-init` against all distros
+
+#### Validate Cloud-Init Configuration
 
 ```bash
+# Validate all cloud-init configurations
 make validate-cloudinit
+
+# Validate specific distro (currently only jammy)
+make validate-cloudinit-jammy
 ```
 
-To validate `cloud-init` configuration of a specific distro (`jammy`)
+#### Validate Packer Templates
 
 ```bash
-make validate-cloudinit-jammy # <distroname> currently only jammy
-```
-
-To simply validate `ubuntu.pkr.hcl` template against all distros
-
-```bash
+# Validate all packer templates
 make validate-packer
+
+# Validate only QEMU template
+make validate-jammy
+
+# Validate only AWS template
+make validate-aws-jammy
 ```
 
-### Build Images
+### Building Images
 
-to build Ubuntu 22.04 (Jammy) image
+#### QEMU Images (Local VMS)
 
 ```bash
+# Build Ubuntu 22.04 (Jammy) QEMU image
 make build-jammy
 ```
+
+#### AWS AMIs
+
+```bash
+# Build Ubuntu 22.04 (Jammy) AWS AMI
+make build-aws-jammy
+```
+
+#### AWS AMI Building
+
+Before building AWS AMIs, ensure:
+
+1. You have AWS-CLI installed and configured
+2. The AWS CLI profile has permissions to:
+  * Create and modify EC2 instances
+  * Create AMIs
+  * Create and modify security groups
+  * Create and delete key pairs
+
+You can customize the AWS build by editing `vars/aws-jammy.pkrvars.hcl` to change:
+
+AWS region
+Instance type
+AMI name prefix
+Other AWS-specific settings
