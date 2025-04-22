@@ -37,6 +37,11 @@ variable "ssh_username" {
   default = "ubuntu"
 }
 
+variable "username" {
+  type    = string
+  default = "pulsys"
+}
+
 variable "associate_public_ip_address" {
   type    = bool
   default = true
@@ -100,9 +105,55 @@ build {
     inline = [
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-      "sudo apt-get install -y nginx openssh-server",
-      "sudo systemctl enable nginx"
+      "sudo apt-get install -y openssh-server"
     ]
+  }
+  
+  # Create the pulsys user before running any scripts that depend on it
+  provisioner "shell" {
+    inline = [
+      "sudo useradd -m -s /bin/bash ${var.username}",
+      "sudo echo '${var.username} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers",
+      "sudo mkdir -p /home/${var.username}/.ssh",
+      "sudo chmod 700 /home/${var.username}/.ssh",
+      "sudo touch /home/${var.username}/.ssh/authorized_keys",
+      "sudo chmod 600 /home/${var.username}/.ssh/authorized_keys",
+      "sudo chown -R ${var.username}:${var.username} /home/${var.username}/.ssh"
+    ]
+  }
+
+  # Copy defaults.cfg to the VM
+  provisioner "file" {
+    destination = "/tmp/defaults.cfg"
+    source      = "./config/defaults.cfg"
+  }
+  
+  # Move defaults.cfg to its final location
+  provisioner "shell" {
+    inline = ["sudo mv /tmp/defaults.cfg /etc/cloud/cloud.cfg.d/defaults.cfg"]
+  }
+  
+  # Run install_tools.sh with appropriate permissions
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/install_tools.sh"
+  }
+  
+  # Run setup.sh with appropriate permissions
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/setup.sh"
+  }
+  
+  # Run Ansible playbook to add developer users
+  provisioner "ansible-local" {
+    playbook_file = "./templates/scripts/dev_user_add.yml"
+  }
+  
+  # Run cleanup.sh with appropriate permissions
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/cleanup.sh"
   }
 
   # Create the output directory for manifest
