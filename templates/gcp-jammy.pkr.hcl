@@ -54,6 +54,7 @@ locals {
   output_dir = "output/${local.vm_name}"
   timestamp  = formatdate("YYYYMMDD-hhmmss", timestamp())
   image_name = "${local.vm_name}-${local.timestamp}"
+  version_label = replace(var.ubuntu_version, ".", "-") # Convert "22.04" to "22-04" for labels
 }
 
 source "googlecompute" "ubuntu" {
@@ -64,25 +65,25 @@ source "googlecompute" "ubuntu" {
   image_description = "Ubuntu ${var.ubuntu_version} built with Packer"
   ssh_username = var.ssh_username
   machine_type = var.machine_type
-  
+
   # Disk configuration
   disk_size = 30
   disk_type = "pd-ssd"
-  
+
   # Network configuration
   network = "default"
-  
+
   # Use preemptible instance to reduce cost during build
   preemptible = true
-  
-  # Add labels to the resulting image
+
+  # Add labels to the resulting image - using regex-compliant values
   image_labels = {
     created_by = "packer"
     os = "ubuntu"
-    version = var.ubuntu_version
-    build_date = local.timestamp
+    version = local.version_label # Using the sanitized version
+    build_date = replace(local.timestamp, ":", "-") # Also ensuring timestamp is compliant
   }
-  
+
   # Add a startup script to set metadata
   metadata = {
     enable-oslogin = "FALSE"
@@ -109,7 +110,7 @@ build {
       "sudo systemctl enable nginx"
     ]
   }
-  
+
   # Create the pulsys user before running any scripts that depend on it
   provisioner "shell" {
     inline = [
@@ -128,29 +129,29 @@ build {
     destination = "/tmp/defaults.cfg"
     source      = "./config/defaults.cfg"
   }
-  
+
   # Move defaults.cfg to its final location
   provisioner "shell" {
     inline = ["sudo mv /tmp/defaults.cfg /etc/cloud/cloud.cfg.d/defaults.cfg"]
   }
-  
+
   # Run install_tools.sh with appropriate permissions
   provisioner "shell" {
     execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
     script          = "./templates/scripts/install_tools.sh"
   }
-  
+
   # Run setup.sh with appropriate permissions
   provisioner "shell" {
     execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
     script          = "./templates/scripts/setup.sh"
   }
-  
+
   # Run Ansible playbook to add developer users
   provisioner "ansible-local" {
     playbook_file = "./templates/scripts/dev_user_add.yml"
   }
-  
+
   # Run cleanup.sh with appropriate permissions
   provisioner "shell" {
     execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
