@@ -10,6 +10,7 @@
         key: "{{ item }}"
       loop:
         - https://github.com/acozine.keys
+        - https://github.com/aruiz1789.keys
         - https://github.com/bess.keys
         - https://github.com/beck-davis.keys
         - https://github.com/carolyncole.keys
