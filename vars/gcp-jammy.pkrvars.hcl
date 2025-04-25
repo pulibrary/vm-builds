@@ -1,0 +1,6 @@
+ubuntu_distro    = "ubuntu"
+ubuntu_version   = "2204"
+project_id       = "pul-gcdc"
+zone             = "us-central1-a"
+machine_type     = "n1-standard-1"
+vm_template_name = "ubuntu-jammy-gcp"
