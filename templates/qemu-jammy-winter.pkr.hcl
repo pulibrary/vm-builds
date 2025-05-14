@@ -1,92 +1,137 @@
 packer {
   required_plugins {
     qemu = {
-      version = ">= 1.0.9"
+      version = ">= 1.0.0"
       source  = "github.com/hashicorp/qemu"
     }
   }
 }
 
-## Variable will be set via the Command line defined under the `vars` directory
-variable "ubuntu_distro" {
-  type = string
-}
-
-variable "ubuntu_version" {
-  type = string
-}
-
-variable "ubuntu_iso_file" {
-  type = string
-}
-
-variable "vm_template_name" {
-  type    = string
-  default = "packer-qemu-ubuntu"
-}
 
 locals {
-  vm_name    = "${var.vm_template_name}-${var.ubuntu_version}"
+  vm_name    = "packer-qemu-ubuntu-${var.ubuntu_version}"
   output_dir = "output/${local.vm_name}"
+  timestamp  = formatdate("YYYYMMDD-hhmmss", timestamp())
 }
 
-source "qemu" "custom_image" {
-  vm_name = "ubuntu-jammy-qemu"
+# --- QEMU SOURCE ---
+source "qemu" "ubuntu" {
+  accelerator     = "kvm"
+  headless        = true
+  output_directory = local.output_dir
 
-  iso_url      = "https://releases.ubuntu.com/${var.ubuntu_version}/${var.ubuntu_iso_file}"
-  iso_checksum = "file:https://releases.ubuntu.com/${var.ubuntu_version}/SHA256SUMS"
+  # Boot from Ubuntu live-server ISO (with cloud‑init autoinstall)
+  iso_url            = "https://releases.ubuntu.com/${var.ubuntu_version}/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
+  # TODO: update this sha256 after downloading ISO
+  iso_checksum_type  = "sha256"
+  iso_checksum       = "ENTER_SHA256_HERE"
 
-  # Location of Cloud-Init / Autoinstall Configuration files
-  # Will be served via an HTTP Server from Packer
+  # Disk configuration
+  disk_size    = "30720"      # 30 GB
+  disk_interface = "virtio"
+  format       = "qcow2"
+
+  # Networking / SSH
+  ssh_username = var.ssh_username
+  ssh_timeout  = "20m"
+  ssh_pty      = true
+  # forward host port 2222 → guest port 22
+  ssh_host_port   = "2222"
+  ssh_guest_port  = "22"
+
+  # HTTP server to serve cloud-init
   http_directory = "http"
 
-  # Boot Commands when Loading the ISO file with OVMF.fd file GrubV2
+  # Tell the installer to use autoinstall
+  boot_wait   = "10s"
   boot_command = [
-    "<spacebar><wait><spacebar><wait><spacebar><wait><spacebar><wait><spacebar><wait>",
-    "e<wait>",
-    "<down><down><down><end>",
-    " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
-    "<f10>"
+    "<esc><wait>",
+    "autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter>"
   ]
-
-  boot_wait = "5s"
-
-  # QEMU specific configuration
-  cpus             = 4
-  memory           = 8196
-  disk_size        = "30G"
-  disk_compression = true
-
-  efi_firmware_code = "/usr/share/OVMF/OVMF_CODE_4M.fd"
-  efi_firmware_vars = "/usr/share/OVMF/OVMF_VARS_4M.fd"
-  efi_boot          = true
-
-  # Final Image will be available in `output/packerubuntu-*/`
-  output_directory = ""
-
-  # SSH configuration so that Packer can log into the Image
-  ssh_password     = "pulsys"
-  ssh_username     = "pulsys"
-  ssh_timeout      = "20m"
-  shutdown_command = "echo 'lib-vm' | sudo -S shutdown -P now"
-  headless         = false
 }
 
+# --- BUILD & PROVISION ---
 build {
-  name    = "custom_build"
-  sources = ["source.qemu.custom_image"]
+  name    = "ubuntu-qemu"
+  sources = ["source.qemu.ubuntu"]
 
-  # Wait till Cloud-Init has finished setting up the image on first-boot
+  # Wait for cloud-init to finish (same as GCP template)
   provisioner "shell" {
     inline = [
-      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sleep 1; done"
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud‑Init…'; sleep 1; done"
     ]
   }
 
-  # Finally Generate a Checksum (SHA256) which can be used for further stages in the `output` directory
-  post-processor "checksum" {
-    checksum_types      = ["sha256"]
-    output              = "${local.output_dir}/${local.vm_name}.{{.ChecksumType}}"
-    keep_input_artifact = true
+  # System update & basic packages
+  provisioner "shell" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get upgrade -y",
+      "sudo apt-get install -y nginx openssh-server",
+      "sudo systemctl enable nginx"
+    ]
+  }
+
+  # Create your pulsys user
+  provisioner "shell" {
+    inline = [
+      "sudo useradd -m -s /bin/bash ${var.username}",
+      "echo '${var.username} ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/${var.username}",
+      "sudo mkdir -p /home/${var.username}/.ssh",
+      "sudo chmod 700 /home/${var.username}/.ssh",
+      "sudo touch /home/${var.username}/.ssh/authorized_keys",
+      "sudo chmod 600 /home/${var.username}/.ssh/authorized_keys",
+      "sudo chown -R ${var.username}:${var.username} /home/${var.username}/.ssh"
+    ]
+  }
+
+  # Copy your defaults.cfg
+  provisioner "file" {
+    source      = "./config/defaults.cfg"
+    destination = "/tmp/defaults.cfg"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo mv /tmp/defaults.cfg /etc/cloud/cloud.cfg.d/defaults.cfg"]
+  }
+
+  # Run your install_tools.sh and setup.sh
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/install_tools.sh"
+  }
+
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/setup.sh"
+  }
+
+  # Ansible‑local for dev_user_add
+  provisioner "ansible-local" {
+    playbook_file = "./templates/scripts/dev_user_add.yml"
+  }
+
+  # Cleanup
+  provisioner "shell" {
+    execute_command = "echo '${var.username}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "./templates/scripts/cleanup.sh"
   }
 }
+
+# --- POST-PROCESS: convert QCOW2 → VMDK for VMware ---
+post-processor "shell-local" {
+  inline = [
+    "qemu-img convert -p -O vmdk ${local.output_dir}/${local.vm_name}.qcow2 ${local.output_dir}/${local.vm_name}.vmdk"
+  ]
+}
+
+# --- MANIFEST ---
+post-processor "manifest" {
+  output     = "${local.output_dir}/manifest.json"
+  strip_path = true
+  custom_data = {
+    vm_name   = local.vm_name
+    timestamp = local.timestamp
+  }
+}
+
