@@ -1,140 +1,159 @@
 # VM-Builds
 
-Packer templates for creating server images with:
-- Packer
-- QEMU (for local VM images)
-- AWS (for AMI creation)
-- GCP (for GCE image creation)
-- Autoinstall (cloud-init)
+Packer templates for creating server images using **just** as a task runner:
+
+- **Packer** for template-driven builds
+- **QEMU** for local VM image creation
+- **AWS** for AMI creation
+- **GCP** for GCE image creation
+- **Cloud-Init** for autoinstall validation (optional)
+
+---
 
 ## Requirements
 
-- [Packer](https://www.packer.io/) (v1.8.0+)
-- [QEMU](https://www.qemu.org/) (for local VM building)
-- [AWS CLI](https://aws.amazon.com/cli/) (configured with proper credentials for AWS AMI building)
-- [Google Cloud SDK](https://cloud.google.com/sdk) (configured with proper credentials for GCP image building)
-- [Cloud-Init](https://cloud-init.io/) (for validation, optional)
+- [Packer](https://www.packer.io/) v1.8.0 or higher
+- [QEMU](https://www.qemu.org/) (for local VM builds)
+- [AWS CLI](https://aws.amazon.com/cli/) configured for AMI building
+- [Google Cloud SDK](https://cloud.google.com/sdk) configured for GCP image builds
+- [Cloud-Init](https://cloud-init.io/) (for schema validation, optional)
+- [just](https://github.com/casey/just) v1.0 or higher (task runner)
+
+---
 
 ## Supported Images
 
-| Distribution | Version | Build Types |
-|:-------------|:-------:|:------------|
+| Distribution               | Version   | Build Targets  |
+| -------------------------- | --------- | -------------- |
 | **Ubuntu Jammy Jellyfish** | `22.04.4` | QEMU, AWS, GCP |
 
+---
 
 ## Usage
 
-This project uses GNU-Make to streamline building and validation.
+All workflows are exposed via `just` recipes defined in the top-level `justfile`.
+
+### Initialization
+
+Prepare any missing Packer plugins:
+
+```bash
+just init-qemu
+just init-aws
+just init-gcp
+```
 
 ### Validation
 
-#### Validate All Templates
+#### Validate all Packer templates
+
 ```bash
-make validate
-````
-
-#### Validate Cloud-Init Configuration
-
-```
-bash
-# Validate all cloud-init configurations
-make validate-cloudinit
-
-# Validate specific distro (currently only jammy)
-make validate-cloudinit-jammy
+just validate
 ```
 
-#### Validate Packer Templates
+> (runs `validate-jammy`, `validate-aws-jammy`, `validate-gcp-jammy`)
 
+#### Validate only one Packer target
+
+```bash
+just validate-jammy      # QEMU only\ njust validate-aws-jammy  # AWS AMI
+just validate-gcp-jammy   # GCP image
 ```
-bash
-# Validate all packer templates
-make validate-packer
 
-# Validate only QEMU template
-make validate-jammy
+#### Validate Cloud-Init config
 
-# Validate only AWS template
-make validate-aws-jammy
-
-# Validate only GCP template
-make validate-gcp-jammy
+```bash
+just validate-cloudinit
 ```
+
+> (schema-checks `http/jammy/user-data` if `cloud-init` is installed)
 
 ### Building Images
 
-#### QEMU Images (Local VMs)
+#### Local QEMU VM
 
-```
-bash
-# Build Ubuntu 22.04 (Jammy) QEMU image
-make build-jammy
+```bash
+just build-jammy
 ```
 
-#### AWS AMIs
+Runs a headless QEMU build with `vars/jammy.pkrvars.hcl`.
 
-```
-bash
-# Build Ubuntu 22.04 (Jammy) AWS AMI
-make build-aws-jammy
+##### Debug mode
+
+```bash
+just build-jammy debug=true
+# or equivalently
+just build-jammy-debug
 ```
 
-#### GCP Images
+> Enables `-debug` and extra logging in Packer.
 
+#### AWS AMI
+
+```bash
+just build-aws-jammy
 ```
-bash
-# Build Ubuntu 22.04 (Jammy) GCP image
-make build-gcp-jammy
+
+Creates an AMI in AWS using `vars/aws-jammy.pkrvars.hcl`.
+
+##### Debug mode
+
+```bash
+just build-aws-jammy debug=true
 ```
+
+Or:
+
+```bash
+just build-aws-jammy-debug
+```
+
+#### GCP Image
+
+```bash
+just build-gcp-jammy
+```
+
+Builds a GCE image using `vars/gcp-jammy.pkrvars.hcl`.
+
+##### Debug mode
+
+```bash
+just build-gcp-jammy debug=true
+```
+
+Or:
+
+```bash
+just build-gcp-jammy-debug
+```
+
+---
 
 ## Cloud Provider Configuration
 
-### AWS AMI Building
+### AWS
 
-Before building AWS AMIs, ensure:
+- Credentials via AWS CLI (`aws configure`).
+- Edit `vars/aws-jammy.pkrvars.hcl` to set:
+  - `region`, `instance_type`, `ami_name`, etc.
 
-1. You have AWS CLI installed and configured with proper credentials
+### GCP
 
-2. The AWS CLI profile has permissions to:
+- Credentials via `gcloud auth login`.
+- Edit `vars/gcp-jammy.pkrvars.hcl` to set:
+  - `project_id`, `zone`, `machine_type`, etc.
 
-   * Create and modify EC2 instances
-   * Create AMIs
-   * Create and modify security groups
-   * Create and delete key pairs
-
-You can customize the AWS build by editing `vars/aws-jammy.pkrvars.hcl` to change:
-
-* AWS region
-* Instance type
-* AMI name prefix
-* Other AWS-specific settings
-
-### GCP Image Building
-
-Before building GCP images, ensure:
-
-1. You have Google Cloud SDK installed and configured with proper credentials
-
-2. Your GCP account has permissions to:
-
-   * Create and delete compute instances
-   * Create disk images
-   * Create and modify firewall rules
-
-You must customize the GCP build by editing `vars/gcp-jammy.pkrvars.hcl` to set:
-
-* Your GCP project ID
-* Zone preference
-* Machine type
-* Other GCP-specific settings
-
+---
 
 ## Troubleshooting
 
-### Common Issues
+- **Missing **``: Schema validation will skip if not installed.
+- **AWS/GCP permissions**: Ensure proper IAM roles and CLI config.
+- **QEMU errors**: If running on macOS, ensure `headless = true` in the QEMU source block or adjust to `display = "cocoa"` to avoid GTK.
+- **Firewall/Networking**: Verify host ports (e.g. SSH forwarding ranges) are free.
 
-1. **Missing cloud-init command**: The validation will skip cloud-init validation if the command is not available
-2. **AWS credential issues**: Ensure your AWS credentials are properly configured with `aws configure`
-3. **GCP credential issues**: Ensure you're authenticated with `gcloud auth login` and have set your project with `gcloud config set project YOUR_PROJECT_ID`
-4. **QEMU errors**: Check that OVMF firmware files are installed on your system
-5. **Permission issues**: For cloud providers, check that your account has the necessary permissions to create instances and images
+---
+
+> For further details, inspect the `justfile` for available commands and flags.
+
