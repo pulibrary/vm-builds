@@ -3,7 +3,8 @@
   "packages": [
     "packer@latest",
     "python@latest",
-    "awscli2@latest"
+    "awscli2@latest",
+    "just@latest"
   ],
   "shell": {
     "init_hook": [
