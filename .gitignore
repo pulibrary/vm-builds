@@ -7,3 +7,32 @@ crash.log
 # For built boxes
 *.box
 output
+
+# Devbox
+.devbox/
+
+# Python virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Ansible
+*.retry
+ansible.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
