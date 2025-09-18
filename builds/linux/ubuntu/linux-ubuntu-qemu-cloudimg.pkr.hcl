@@ -22,7 +22,7 @@ packer {
 }
 
 /////////////////////////////
-// Variables (inlined)     //
+// Variables (separate these once successful?)     //
 /////////////////////////////
 
 // Naming / OS metadata
@@ -50,7 +50,7 @@ variable "vm_guest_os_type" {
   description = "Informational guest type label (for manifest)."
 }
 
-// Firmware label for manifest only (qemu will use default unless you wire EFI vars)
+// Firmware label for manifest only (qemu will use default unless we wire EFI vars)
 variable "vm_firmware" {
   type        = string
   default     = "efi-secure"
@@ -313,14 +313,14 @@ variable "ansible_username" {
   type        = string
   default     = "packer"
   sensitive   = true
-  description = "SSH user for Ansible (often same as build_username)."
+  description = "SSH user for Ansible (same as build_username)."
 }
 
 variable "ansible_key" {
   type        = string
   default     = ""
   sensitive   = true
-  description = "SSH public key for Ansible (if needed)."
+  description = "SSH public key for Ansible"
 }
 
 variable "vm_guest_os_language" {
@@ -439,7 +439,7 @@ locals {
     })
   }
 
-  // If you ever switch to HTTP seed instead of a seed disk:
+  // If we switch to HTTP seed instead of a seed disk:
   data_source_command = var.common_data_source == "http" ? "ds=\"nocloud-net;seedfrom=http://{{.HTTPIP}}:{{.HTTPPort}}/\"" : "ds=\"nocloud\""
 
   bucket_name        = replace("${var.vm_guest_os_family}-${var.vm_guest_os_name}-${var.vm_guest_os_version}", ".", "")
@@ -461,7 +461,7 @@ source "qemu" "linux-ubuntu-cloudimg" {
   headless     = var.qemu_headless
   qemu_binary  = var.qemu_binary
   machine_type = var.qemu_machine_type
-  // firmware  = local.qemu_firmware // uncomment if your qemu plugin supports it
+  // firmware  = local.qemu_firmware // this is a mess because of arm and intel archs avoid these dragons
 
   // Resources (Packer can resize a cloud image when disk_image=true)
   cpus           = var.vm_cpu_count
@@ -481,7 +481,7 @@ source "qemu" "linux-ubuntu-cloudimg" {
   cd_content = var.common_data_source == "disk" ? local.data_source_content : null
   cd_label   = var.common_data_source == "disk" ? "cidata" : null
 
-  // (Optional) Serve the same content via ephemeral HTTP if you prefer nocloud-net
+  // Serve the same content via ephemeral HTTP
   http_content      = var.common_data_source == "http" ? local.data_source_content : null
   http_bind_address = var.common_data_source == "http" ? var.common_http_ip : null
   http_port_min     = var.common_data_source == "http" ? var.common_http_port_min : null
@@ -506,7 +506,7 @@ source "qemu" "linux-ubuntu-cloudimg" {
 build {
   sources = ["source.qemu.linux-ubuntu-cloudimg"]
 
-  // Reuse your Ansible flow
+  // Reuse Ansible flow
   provisioner "ansible" {
     user                   = var.build_username
     galaxy_file            = "${abspath(path.root)}/../../../ansible/linux-requirements.yml"
@@ -647,7 +647,7 @@ EOT
       "${local.output_dir}/${local.qcow2_artifact}", # .qcow2 or .qcow2.gz
       "${local.output_dir}/${local.vm_name}.vmdk",
       "${local.output_dir}/${local.vm_name}.vhd",
-      # If you want OVA to be part of the artifact set too, uncomment the next line:
+      # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
       # "${local.output_dir}/${local.vm_name}.ova",
     ]
   }
