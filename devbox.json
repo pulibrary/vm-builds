@@ -4,7 +4,10 @@
     "packer@latest",
     "python@latest",
     "awscli2@latest",
-    "just@latest"
+    "just@latest",
+    "git@latest",
+    "ansible@latest",
+    "qemu@latest"
   ],
   "shell": {
     "init_hook": [
