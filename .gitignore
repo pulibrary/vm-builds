@@ -29,6 +29,17 @@ build/
 *.retry
 ansible.log
 
+# Packer build outputs
+artifacts/
+manifests/
+packer_cache/
+output-*/
+
+# Local ISOs
+isos/*
+!isos/.gitkeep
+
+
 # IDE
 .vscode/
 .idea/
