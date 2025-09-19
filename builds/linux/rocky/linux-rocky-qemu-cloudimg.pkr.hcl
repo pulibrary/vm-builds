@@ -451,7 +451,10 @@ build {
     galaxy_force_with_deps = true
     playbook_file          = "${abspath(path.root)}/../../../ansible/linux-playbook.yml"
     roles_path             = "${abspath(path.root)}/../../../ansible/roles"
-    ansible_env_vars       = ["ANSIBLE_CONFIG=${abspath(path.root)}/../../../ansible/ansible.cfg"]
+    ansible_env_vars       = [
+      "ANSIBLE_CONFIG=${abspath(path.root)}/../../../ansible/ansible.cfg",
+      "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES",
+    ]
     extra_arguments = [
       "--extra-vars", "display_skipped_hosts=false",
       "--extra-vars", "build_username=${var.build_username}",
@@ -459,6 +462,7 @@ build {
       "--extra-vars", "ansible_username=${var.ansible_username}",
       "--extra-vars", "ansible_key='${var.ansible_key}'",
       "--extra-vars", "enable_cloudinit=${var.vm_guest_os_cloudinit}",
+      "--extra-vars", "cleanup_final_image=true",
     ]
   }
 
