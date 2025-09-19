@@ -36,8 +36,8 @@ packer_cache/
 output-*/
 
 # Local ISOs
-isos/*
-!isos/.gitkeep
+**/isos/*
+!**/isos/.gitkeep
 
 
 # IDE
