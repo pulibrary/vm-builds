@@ -35,6 +35,9 @@ manifests/
 packer_cache/
 output-*/
 
+# Log files
+*.log
+
 # Local ISOs
 **/isos/*
 !**/isos/.gitkeep

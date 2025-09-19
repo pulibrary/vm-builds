@@ -1,13 +1,12 @@
-# DHCP if ip is null, else static
+%{~ if (ip != null) || (gateway != null) || (dns != null && length(dns) > 0) ~}
 network:
   version: 2
   ethernets:
     ${device}:
-%{ if ip == null }
-      dhcp4: true
-      dhcp6: false
-%{ else }
+%{ if ip != null }
       addresses: [${ip}/${netmask}]
+%{ endif }
+%{ if gateway != null }
       gateway4: ${gateway}
 %{ endif }
 %{ if dns != null && length(dns) > 0 }
@@ -17,3 +16,5 @@ network:
           - ${d}
 %{ endfor }
 %{ endif }
+%{~ endif ~}
+

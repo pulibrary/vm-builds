@@ -430,6 +430,11 @@ source "qemu" "linux-rocky-cloudimg" {
 
   shutdown_command = "echo '${var.build_password}' | sudo -S -E shutdown -P now"
   shutdown_timeout = var.common_shutdown_timeout
+
+  qemuargs = [
+    ["-serial", "file:serial.log"],
+    ["-cpu", "max"],
+  ]
 }
 
 //////////////
