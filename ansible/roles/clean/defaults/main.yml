@@ -1,0 +1,18 @@
+---
+# set a safe default
+cleanup_final_image: false
+# Common cloud-image usernames that sometimes exist
+users_remove_known_defaults:
+  - cloud-user     # RHEL/Rocky/Amazon images
+  - rocky          # Rocky images
+  - ec2-user       # Amazon Linux
+  - ubuntu         # Ubuntu cloud images
+  - packer         # Often created by packer/cloud-init
+
+# Extra usernames you want removed (per host/group as needed)
+users_remove_extra: []
+
+# Users to always keep safe (merged at runtime with ansible_user)
+users_keep_always:
+  - root
+  - pulsys

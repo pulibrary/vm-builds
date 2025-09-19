@@ -97,3 +97,7 @@
   loop:
     - /root/anaconda-ks.cfg
     - /root/original-ks.cfg
+
+# --- remove packer/cloud-init users (shared) ---
+- name: Cleanup builder/cloud-init users (RedHat family)
+  ansible.builtin.include_tasks: users.yml

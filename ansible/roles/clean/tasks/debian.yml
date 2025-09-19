@@ -86,3 +86,6 @@
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.bash_history"
     state: absent
+
+- name: Cleanup builder/cloud-init users (Debian family)
+  ansible.builtin.include_tasks: users.yml

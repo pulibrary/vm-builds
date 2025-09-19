@@ -1,0 +1,36 @@
+---
+pulsys_enabled: true
+
+pulsys_tower_key: >-
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP+lnexM16ZDOV113XlSHO2cgiGiO4bE3/IdFYkbv0RL
+  pulsys@ansible-tower1.princeton.edu
+
+ops_github_keys:
+  - https://github.com/acozine.keys
+  - https://github.com/aruiz1789.keys
+  - https://github.com/gpmenos.keys
+  - https://github.com/jkazmier-PUL.keys
+  - https://github.com/kayiwa.keys
+  - https://github.com/VickieKarasic.keys
+
+library_github_keys:
+  - https://github.com/bess.keys
+  - https://github.com/carolyncole.keys
+  - https://github.com/christinach.keys
+  - https://github.com/cwulfman.keys
+  - https://github.com/eliotjordan.keys
+  - https://github.com/escowles.keys
+  - https://github.com/hackartisan.keys
+  - https://github.com/hectorcorrea.keys
+  - https://github.com/jaymeeh.keys
+  - https://github.com/jrgriffiniii.keys
+  - https://github.com/kelynch.keys
+  - https://github.com/kevinreiss.keys
+  - https://github.com/leefaisonr.keys
+  - https://github.com/mzelesky.keys
+  - https://github.com/precillap.keys
+  - https://github.com/regineheberlein.keys
+  - https://github.com/rladdusaw.keys
+  - https://github.com/sandbergja.keys
+  - https://github.com/sdellis.keys
+  - https://github.com/tpendragon.keys
