@@ -25,7 +25,6 @@ packer {
 // Variables               //
 /////////////////////////////
 
-// Naming / OS metadata
 variable "vm_guest_os_family" {
   type    = string
   default = "linux"
@@ -72,11 +71,10 @@ variable "associate_public_ip" {
   default = true
 }
 
-// AMI source filters (defaults target Rocky Linux 9 x86_64 Base images)
-// NOTE: Verify/override owners for your region/account. These are placeholders.
+// Rocky AMI source filters
 variable "source_ami_owners" {
   type    = list(string)
-  default = ["679593333241"] // <— Replace with the official Rocky AMI owner(s) for your region as needed
+  default = ["679593333241"] // Update to official Rocky owners for your region if needed
 }
 
 variable "source_ami_filters" {
@@ -115,7 +113,7 @@ variable "delete_on_termination" {
   default = true
 }
 
-// Communicator / users (base AMI defaults)
+// Communicator / users
 variable "ssh_username" {
   type    = string
   default = "rocky"
@@ -126,7 +124,7 @@ variable "communicator_timeout" {
   default = "30m"
 }
 
-// Users for provisioning (aligned with QEMU builds)
+// Users for provisioning
 variable "build_username" {
   type    = string
   default = "packer"
@@ -200,17 +198,24 @@ variable "cleanup_final_image" {
 data "git-repository" "cwd" {}
 
 locals {
-  build_by          = "Built by: HashiCorp Packer ${packer.version}"
-  build_date        = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
-  build_version     = data.git-repository.cwd.head
-  build_description = "Version: ${local.build_version}\nBuilt on: ${local.build_date}\n${local.build_by}"
+  build_by   = "Built by: HashiCorp Packer ${packer.version}"
+  build_date = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
+
+  # Use timestamp for uniqueness - guaranteed to be safe
+  build_timestamp = formatdate("YYYYMMDDHHmmss", timestamp())
+
+  build_ref_raw   = try(data.git-repository.cwd.head, "unknown")
+  build_hash_full = sha1(local.build_ref_raw)
+
+  build_description = "Commit: ${local.build_hash_full}\nBuilt on: ${local.build_date}\n${local.build_by}"
 
   manifest_date   = formatdate("YYYY-MM-DD hh:mm:ss", timestamp())
   manifest_path   = "${abspath(path.root)}/../../../manifests/"
   manifest_output = "${local.manifest_path}${local.manifest_date}.json"
 
-  vm_name  = "${var.vm_guest_os_family}-${var.vm_guest_os_name}-${var.vm_guest_os_version}-${local.build_version}"
-  ami_name = local.vm_name
+  # Simple, guaranteed-safe AMI name using timestamp
+  # All these components are guaranteed to be alphanumeric or hyphens
+  ami_name = "${var.vm_guest_os_family}-${var.vm_guest_os_name}-${replace(var.vm_guest_os_version, ".", "-")}-${local.build_timestamp}"
 
   common_tags = {
     Name       = local.ami_name
@@ -218,7 +223,7 @@ locals {
     os_name    = var.vm_guest_os_name
     os_version = var.vm_guest_os_version
     build_date = local.build_date
-    build_hash = local.build_version
+    build_hash = local.build_hash_full
   }
 }
 
@@ -237,6 +242,7 @@ source "amazon-ebs" "linux-aws-ami" {
   tags          = local.common_tags
   snapshot_tags = local.common_tags
 
+  # Minimal cloud-init to set the hostname
   user_data = <<-EOT
   #cloud-config
   hostname: lib-vm
@@ -278,7 +284,7 @@ source "amazon-ebs" "linux-aws-ami" {
 build {
   sources = ["source.amazon-ebs.linux-aws-ami"]
 
-  # Reuse Linux playbook/roles (same as QEMU/Ubuntu AWS)
+  # Reuse Linux playbook/roles
   provisioner "ansible" {
     user                   = var.ssh_username
     galaxy_file            = "${abspath(path.root)}/../../../ansible/linux-requirements.yml"
@@ -287,7 +293,7 @@ build {
     roles_path             = "${abspath(path.root)}/../../../ansible/roles"
     ansible_env_vars = [
       "ANSIBLE_CONFIG=${abspath(path.root)}/../../../ansible/ansible.cfg",
-      "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES", // macOS fork-safety fix
+      "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES",
     ]
     extra_arguments = [
       "--extra-vars", "display_skipped_hosts=false",
@@ -308,7 +314,7 @@ build {
     strip_time = true
     custom_data = {
       build_date            = local.build_date
-      build_version         = local.build_version
+      build_version         = local.build_hash_full
       aws_region            = var.aws_region
       ami_name              = local.ami_name
       root_volume_size_gb   = var.root_volume_size_gb

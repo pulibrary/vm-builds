@@ -41,21 +41,15 @@ validate-ubuntu-aws: init-ubuntu-aws
   @echo "PACKER: Validating Ubuntu AWS template"
   packer validate {{ubuntu_aws_tpl}}
 
-# Default empty; if provided, pass it through
+# Default empty; if provided, pass it through (single-line if)
 validate-ubuntu-gcp project_id='': init-ubuntu-gcp
   @echo "PACKER: Validating Ubuntu GCP template (project_id={{project_id}})"
-  if [[ -n "{{project_id}}" ]]; then
-  packer validate -var "gcp_project_id={{project_id}}" {{ubuntu_gcp_tpl}}
-  else
-  packer validate {{ubuntu_gcp_tpl}}
-  fi
+  if [[ -n "{{project_id}}" ]]; then packer validate -var "gcp_project_id={{project_id}}" {{ubuntu_gcp_tpl}}; else packer validate {{ubuntu_gcp_tpl}}; fi
 
-# Rocky QEMU requires iso_checksum at validate time
+# Rocky QEMU requires iso_checksum at validate time (single-line if)
 validate-rocky-qemu iso_checksum='': init-rocky-qemu
   @echo "PACKER: Validating Rocky QEMU template"
-  if [[ -z "{{iso_checksum}}" ]]; then
-  echo "ERROR: iso_checksum is required for Rocky (e.g. sha256:...)" >&2; exit 1;
-  fi
+  if [[ -z "{{iso_checksum}}" ]]; then echo "ERROR: iso_checksum is required for Rocky (e.g. sha256:...)" >&2; exit 1; fi
   packer validate -var "iso_checksum={{iso_checksum}}" {{rocky_qemu_tpl}}
 
 validate-rocky-aws: init-rocky-aws
@@ -68,19 +62,11 @@ validate-all: validate-ubuntu-qemu validate-ubuntu-aws validate-ubuntu-gcp valid
 # ─── Cloud-Init schema checks (optional) ────────────────────────────────────
 validate-cloudinit-ubuntu:
   @echo "CLOUD-INIT: Validating Ubuntu user-data (best-effort)"
-  if command -v cloud-init >/dev/null; then
-  cloud-init schema -c {{ubuntu_cloudinit_user_data}} || echo "Skip: template rendering may be required"
-  else
-  echo "cloud-init not installed, skipping."
-  fi
+  if command -v cloud-init >/dev/null; then cloud-init schema -c {{ubuntu_cloudinit_user_data}} || echo "Skip: template rendering may be required"; else echo "cloud-init not installed, skipping."; fi
 
 validate-cloudinit-rocky:
   @echo "CLOUD-INIT: Validating Rocky user-data (best-effort)"
-  if command -v cloud-init >/dev/null; then
-  cloud-init schema -c {{rocky_cloudinit_user_data}} || echo "Skip: template rendering may be required"
-  else
-  echo "cloud-init not installed, skipping."
-  fi
+  if command -v cloud-init >/dev/null; then cloud-init schema -c {{rocky_cloudinit_user_data}} || echo "Skip: template rendering may be required"; else echo "cloud-init not installed, skipping."; fi
 
 validate-cloudinit: validate-cloudinit-ubuntu validate-cloudinit-rocky
   @echo "CLOUD-INIT: Done."
@@ -89,53 +75,29 @@ validate-cloudinit: validate-cloudinit-ubuntu validate-cloudinit-rocky
 # Ubuntu QEMU: optionally export OVF (export_ovf=true) and toggle debug
 build-ubuntu-qemu export_ovf='false' debug='false': validate-ubuntu-qemu
   @echo "PACKER: Building Ubuntu QEMU (export_ovf={{export_ovf}}, debug={{debug}})"
-  if [[ "{{debug}}" == "true" ]]; then
-  PACKER_LOG=1 packer build -debug -force -var "export_ovf={{export_ovf}}" {{ubuntu_qemu_tpl}}
-  else
-  PACKER_LOG=1 packer build -force -var "export_ovf={{export_ovf}}" {{ubuntu_qemu_tpl}}
-  fi
+  if [[ "{{debug}}" == "true" ]]; then PACKER_LOG=1 packer build -debug -force -var "export_ovf={{export_ovf}}" {{ubuntu_qemu_tpl}}; else PACKER_LOG=1 packer build -force -var "export_ovf={{export_ovf}}" {{ubuntu_qemu_tpl}}; fi
 
 # Rocky QEMU: checksum required from the Rocky cloud image you downloaded
 build-rocky-qemu iso_checksum='' debug='false': validate-rocky-qemu
   @echo "PACKER: Building Rocky QEMU (debug={{debug}})"
-  if [[ -z "{{iso_checksum}}" ]]; then
-  echo "ERROR: iso_checksum is required (e.g. sha256:...)" >&2; exit 1;
-  fi
-  if [[ "{{debug}}" == "true" ]]; then
-  PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{iso_checksum}}" {{rocky_qemu_tpl}}
-  else
-  PACKER_LOG=1 packer build -force -var "iso_checksum={{iso_checksum}}" {{rocky_qemu_tpl}}
-  fi
+  if [[ -z "{{iso_checksum}}" ]]; then echo "ERROR: iso_checksum is required (e.g. sha256:...)" >&2; exit 1; fi
+  if [[ "{{debug}}" == "true" ]]; then PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{iso_checksum}}" {{rocky_qemu_tpl}}; else PACKER_LOG=1 packer build -force -var "iso_checksum={{iso_checksum}}" {{rocky_qemu_tpl}}; fi
 
 # Ubuntu AWS
 build-ubuntu-aws debug='false': validate-ubuntu-aws
   @echo "PACKER: Building Ubuntu AWS (debug={{debug}})"
-  if [[ "{{debug}}" == "true" ]]; then
-  PACKER_LOG=1 packer build -debug -force {{ubuntu_aws_tpl}}
-  else
-  PACKER_LOG=1 packer build -force {{ubuntu_aws_tpl}}
-  fi
+  if [[ "{{debug}}" == "true" ]]; then PACKER_LOG=1 packer build -debug -force {{ubuntu_aws_tpl}}; else PACKER_LOG=1 packer build -force {{ubuntu_aws_tpl}}; fi
 
 # Rocky AWS
 build-rocky-aws debug='false': validate-rocky-aws
   @echo "PACKER: Building Rocky AWS (debug={{debug}})"
-  if [[ "{{debug}}" == "true" ]]; then
-  PACKER_LOG=1 packer build -debug -force {{rocky_aws_tpl}}
-  else
-  PACKER_LOG=1 packer build -force {{rocky_aws_tpl}}
-  fi
+  if [[ "{{debug}}" == "true" ]]; then PACKER_LOG=1 packer build -debug -force {{rocky_aws_tpl}}; else PACKER_LOG=1 packer build -force {{rocky_aws_tpl}}; fi
 
 # Ubuntu GCP: require project id; allow zone/machine type override
 build-ubuntu-gcp project_id='' zone='us-east1-b' machine_type='e2-standard-2' debug='false': validate-ubuntu-gcp
   @echo "PACKER: Building Ubuntu GCP (project_id={{project_id}}, zone={{zone}}, type={{machine_type}}, debug={{debug}})"
-  if [[ -z "{{project_id}}" ]]; then
-  echo "ERROR: project_id is required. Example: just build-ubuntu-gcp project_id=my-gcp-project" >&2; exit 1;
-  fi
-  if [[ "{{debug}}" == "true" ]]; then
-  PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{project_id}}" -var "gcp_zone={{zone}}" -var "gcp_machine_type={{machine_type}}" {{ubuntu_gcp_tpl}}
-  else
-  PACKER_LOG=1 packer build -force -var "gcp_project_id={{project_id}}" -var "gcp_zone={{zone}}" -var "gcp_machine_type={{machine_type}}" {{ubuntu_gcp_tpl}}
-  fi
+  if [[ -z "{{project_id}}" ]]; then echo "ERROR: project_id is required. Example: just build-ubuntu-gcp project_id=my-gcp-project" >&2; exit 1; fi
+  if [[ "{{debug}}" == "true" ]]; then PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{project_id}}" -var "gcp_zone={{zone}}" -var "gcp_machine_type={{machine_type}}" {{ubuntu_gcp_tpl}}; else PACKER_LOG=1 packer build -force -var "gcp_project_id={{project_id}}" -var "gcp_zone={{zone}}" -var "gcp_machine_type={{machine_type}}" {{ubuntu_gcp_tpl}}; fi
 
 # Convenience bundles
 build-all-qemu: build-ubuntu-qemu build-rocky-qemu
