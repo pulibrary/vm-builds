@@ -1,7 +1,7 @@
 #cloud-config
 
 preserve_hostname: false
-hostname: ${vm_guest_os_name}
+hostname: lib-vm
 
 ssh_pwauth: true
 

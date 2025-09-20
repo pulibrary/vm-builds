@@ -28,7 +28,7 @@ This will automatically install all required tools:
 
 ### Manual Installation
 
-If not using Devbox, manually install:
+If not using Devbox, (you know what you're doing :wink:) manually install:
 - Packer >= 1.12.0
 - Ansible >= 2.9
 - Python >= 3.8
@@ -78,11 +78,11 @@ packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 
 | OS | Version | Platform | Status |
 |---|---------|----------|---------|
-| Ubuntu | 22.04 LTS | QEMU | ✅ Working |
-| Ubuntu | 22.04 LTS | GCP | ✅ Working |
-| Ubuntu | 22.04 LTS | AWS | 🚧 Template exists |
-| Rocky Linux | 9.4 | QEMU | ✅ Working |
-| Rocky Linux | 9.4 | AWS | 🚧 Template exists |
+| Ubuntu | 22.04 LTS | QEMU | Working |
+| Ubuntu | 22.04 LTS | GCP | Template exists |
+| Ubuntu | 22.04 LTS | AWS | Working |
+| Rocky Linux | 9.4 | QEMU | Working |
+| Rocky Linux | 9.4 | AWS | Working |
 
 ## Building Images
 
@@ -100,7 +100,7 @@ packer build builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl
 
 ```bash
 # Requires: gcloud auth application-default login
-packer build -var "gcp_project_id=your-project" \
+packer build -var "gcp_project_id=pul-gcdc" \
   builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl
 ```
 
@@ -124,12 +124,12 @@ packer build -var "gcp_project_id=your-project" \
 - Pulls SSH keys from GitHub for:
   - Operations staff
   - Library development staff
-  - Ansible Tower
+  - Ansible Tower Keys
 - Manages build users (`packer`, `ubuntu`)
 
 ### configure
 - Enables SSH public key authentication
-- Sets hostname to `localhost`
+- Sets hostname to `lib-vm`
 - Configures cloud-init datasources
 - Regenerates SSH host keys on first boot
 
@@ -248,5 +248,5 @@ See [LICENSE](LICENSE) file for details.
 
 ---
 
-**Maintained by**: Princeton University Library Operations Team  
+**Maintained by**: Princeton University Library
 **Repository**: https://github.com/pulibrary/vm-builds

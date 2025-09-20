@@ -237,6 +237,12 @@ source "amazon-ebs" "linux-aws-ami" {
   tags          = local.common_tags
   snapshot_tags = local.common_tags
 
+  user_data = <<-EOT
+  #cloud-config
+  hostname: lib-vm
+  manage_etc_hosts: true
+  EOT
+
   # Root volume mapping for the launched build instance
   launch_block_device_mappings {
     device_name           = "/dev/xvda"

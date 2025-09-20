@@ -1,2 +1,2 @@
 instance-id: iid-local01
-local-hostname: ${vm_guest_os_name}
+local-hostname: lib-vm

@@ -252,6 +252,12 @@ source "amazon-ebs" "linux-aws-ami" {
     kms_key_id            = var.ami_kms_key_id
   }
 
+  user_data = <<-EOT
+  #cloud-config
+  hostname: lib-vm
+  manage_etc_hosts: true
+  EOT
+
   # Networking / IAM (optional)
   subnet_id                   = var.aws_subnet_id
   security_group_id           = var.aws_security_group_id

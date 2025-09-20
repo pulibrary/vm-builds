@@ -235,6 +235,14 @@ source "googlecompute" "linux-gcp-image" {
   zone         = var.gcp_zone
   machine_type = var.gcp_machine_type
 
+  metadata = {
+    "user-data" = <<-EOT
+    #cloud-config
+    hostname: lib-vm
+    manage_etc_hosts: true
+    EOT
+  }
+
   # Base image
   source_image_family     = var.source_image_family
   source_image_project_id = var.source_image_project_id
