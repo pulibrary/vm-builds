@@ -7,7 +7,8 @@
     "just@latest",
     "git@latest",
     "ansible@latest",
-    "qemu@latest"
+    "qemu@latest",
+    "google-cloud-sdk@latest"
   ],
   "shell": {
     "init_hook": [
