@@ -192,7 +192,6 @@ Protected users (`root`, `pulsys`) are never removed.
 qemu-system-x86_64 \
   -m 2048 \
   -drive file=artifacts/qemu/linux-ubuntu-*/linux-ubuntu-*.qcow2,format=qcow2 \
-  -enable-kvm \
   -netdev user,id=net0,hostfwd=tcp::2222-:22 \
   -device e1000,netdev=net0
 
