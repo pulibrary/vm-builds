@@ -44,16 +44,30 @@ cd vm-builds
 # Enter the Devbox environment
 devbox shell
 
-# Download Ubuntu cloud image (first time only)
-cd builds/linux/ubuntu/isos
-wget https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img
-# Update the ISO checksum in the .pkr.hcl file
-cd ../../../..
-
-# Build an Ubuntu QEMU image
-packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
+# (One-time) Initialize packer plugins for all templates
+just init-all
 ```
 
+## Quick Start: Build something with `just`
+
+```bash
+# Ubuntu QEMU (requires the cloud-image checksum)
+# Exmaple checksum shown; replace with the current release checksum
+just build-ubuntu-qemu 'sha256:b119a978dcb66194761674c23a860a75cdb7778e95e222b51d7a3386dfe3c920' true
+
+# Rocky QEMU (also requires checksum)
+just build-rocky-qemu 'sha256:<rocky_cloud_image_sha256_here>'
+
+# Ubuntu AWS AMI
+just build-ubuntu-aws
+
+# Rocky AWS AMI
+just build-rocky-aws
+
+# Ubuntu GCP image
+just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
+
+```
 ## Project Structure
 
 ```
@@ -86,7 +100,7 @@ packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 
 ## Building Images
 
-### QEMU Build (Local Testing)
+### Build Images (Local Testing)
 
 ```bash
 # Ubuntu QEMU build

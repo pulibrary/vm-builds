@@ -394,14 +394,14 @@ data "git-repository" "cwd" {}
 locals {
   build_by          = "Built by: HashiCorp Packer ${packer.version}"
   build_date        = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
-  build_version     = data.git-repository.cwd.head
-  build_description = "Version: ${local.build_version}\nBuilt on: ${local.build_date}\n${local.build_by}"
+  build_timestamp   = formatdate("YYYYMMDD-HHmmss", timestamp())
+  build_description = "Built on: ${local.build_date}\n${local.build_by}"
 
   manifest_date   = formatdate("YYYY-MM-DD hh:mm:ss", timestamp())
   manifest_path   = "${abspath(path.root)}/../../../manifests/"
   manifest_output = "${local.manifest_path}${local.manifest_date}.json"
 
-  vm_name    = "${var.vm_guest_os_family}-${var.vm_guest_os_name}-${var.vm_guest_os_version}-${local.build_version}"
+  vm_name    = "${var.vm_guest_os_family}-${var.vm_guest_os_name}-${replace(var.vm_guest_os_version, ".", "-")}-${local.build_timestamp}"
   output_dir = "${abspath(path.root)}/../../../artifacts/qemu/${local.vm_name}"
 
   // Resolve local cloud image if iso_url not provided
@@ -537,7 +537,7 @@ build {
       ansible_username         = var.ansible_username
       build_username           = var.build_username
       build_date               = local.build_date
-      build_version            = local.build_version
+      build_timestamp          = local.build_timestamp
       common_data_source       = var.common_data_source
       vm_cpu_cores             = var.vm_cpu_cores
       vm_cpu_count             = var.vm_cpu_count
