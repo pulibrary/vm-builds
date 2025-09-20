@@ -1,324 +1,252 @@
-# VM Builds - Golden Image Repository
+# VM Builds
 
-Infrastructure-as-Code repository for building standardized virtual machine images across multiple cloud platforms using Packer and Ansible.
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
-- [Supported Platforms](#supported-platforms)
-- [Configuration](#configuration)
-- [Building Images](#building-images)
-- [Ansible Roles](#ansible-roles)
-- [User Management](#user-management)
-- [Testing](#testing)
-- [CI/CD](#cicd)
-- [Contributing](#contributing)
-- [License](#license)
+Infrastructure-as-Code repository for building standardized virtual machine images using Packer and Ansible.
 
 ## Overview
 
-This repository contains Packer templates and Ansible playbooks for creating consistent, secure, and production-ready golden images across multiple virtualization and cloud platforms. These images serve as standardized base templates for deploying infrastructure at Princeton University Library.
-
-### Key Technologies
-
-- **Packer**: Automates the creation of machine images
-- **Ansible**: Handles configuration management and provisioning
-- **Devbox**: Provides consistent development environment
-- **Cloud-init**: Enables cloud instance initialization
-- **QEMU**: Local virtualization for testing
-
-## Features
-
-- **Multi-Platform Support**: Build images for AWS, GCP, and QEMU/KVM
-- **Security-First**: SSH key authentication, sudo management, and user access controls
-- **Dynamic User Management**: GitHub-based SSH key distribution for ops and library staff
-- **Consistent Environment**: Devbox ensures reproducible builds across teams
+This repository contains Packer templates and Ansible playbooks for creating consistent, secure golden images for Princeton University Library infrastructure. Currently supports Ubuntu 22.04 LTS and Rocky Linux 9.4.
 
 ## Prerequisites
 
-### Required Software
+### Using Devbox (Recommended)
 
-- [Devbox](https://www.jetbox.io/devbox) (recommended) OR manually install:
-  - Packer >= 1.12.0
-  - Ansible >= 2.9
-  - Python >= 3.8
-  - AWS CLI v2 (for AWS builds)
-  - Google Cloud SDK (for GCP builds)
-  - QEMU (for local builds)
+```bash
+# Install Devbox from https://www.jetbox.io/devbox
+# Then simply run:
+devbox shell
+```
 
-### Cloud Credentials
+This will automatically install all required tools:
+- Packer
+- Ansible  
+- Python
+- AWS CLI v2
+- Google Cloud SDK
+- QEMU
+- Git
+- Just
 
-For cloud builds, ensure appropriate credentials are configured:
+### Manual Installation
 
-- **AWS**: Configure AWS CLI (`aws configure`) or set environment variables
-- **GCP**: Authenticate with `gcloud auth application-default login`
+If not using Devbox, manually install:
+- Packer >= 1.12.0
+- Ansible >= 2.9
+- Python >= 3.8
+- QEMU (for local testing)
 
 ## Quick Start
-
-### Using Devbox (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/pulibrary/vm-builds.git
 cd vm-builds
 
-# Enter the Devbox shell
+# Enter the Devbox environment
 devbox shell
 
-# Build an Ubuntu image for QEMU
-just build-ubuntu-qemu
+# Download Ubuntu cloud image (first time only)
+cd builds/linux/ubuntu/isos
+wget https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img
+# Update the ISO checksum in the .pkr.hcl file
+cd ../../../..
 
-# Build a Rocky Linux image for AWS
-just build-rocky-aws
-```
-
-### Manual Setup
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-ansible-galaxy install -r ansible/linux-requirements.yml
-
-# Build an image
-packer build -var-file=variables.pkrvars.hcl builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
+# Build an Ubuntu QEMU image
+packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 ```
 
 ## Project Structure
 
 ```
 .
-├── ansible/                    # Ansible configuration management
-│   ├── roles/                 # Ansible roles for image configuration
-│   │   ├── base/             # Base OS configuration
-│   │   ├── users/            # User management (including pulsys)
-│   │   ├── configure/        # System configuration
-│   │   └── clean/            # Image cleanup and preparation
-│   ├── linux-playbook.yml    # Main Linux provisioning playbook
-│   └── linux-requirements.yml # Ansible Galaxy dependencies
-├── artifacts/                 # Build output directory (git-ignored)
-│   └── qemu/                 # QEMU build artifacts
-├── builds/                    # Packer build configurations
+├── ansible/                   # Ansible provisioning
+│   ├── roles/                
+│   │   ├── base/            # OS updates and packages
+│   │   ├── users/           # User and SSH key management
+│   │   ├── configure/       # System configuration
+│   │   └── clean/           # Image cleanup
+│   └── linux-playbook.yml   # Main playbook
+├── artifacts/                # Build outputs (git-ignored)
+├── builds/                  
 │   └── linux/
-│       ├── rocky/            # Rocky Linux templates
-│       └── ubuntu/           # Ubuntu templates
-├── manifests/                # Build manifests and metadata
-├── devbox.json              # Devbox environment configuration
-├── devbox.lock              # Locked dependency versions
-├── justfile                 # Build automation commands
-└── Makefile                 # Legacy build automation
+│       ├── rocky/           # Rocky Linux configs
+│       └── ubuntu/          # Ubuntu configs
+├── manifests/               # Build metadata
+└── devbox.json             # Development environment
 ```
 
-## Supported Platforms
+## Supported Builds
 
-### Operating Systems
-
-| OS | Version | Cloud-init | Status |
-|---|---------|------------|---------|
-| Ubuntu | 22.04 LTS | ✅ | Production |
-| Rocky Linux | 9.4 | ✅ | Production |
-| Windows | TBD | ❌ | In Development |
-
-### Target Platforms
-
-- **QEMU/KVM**: Local testing and on-premise virtualization
-- **AWS EC2**: Amazon Web Services deployments
-- **Google Compute Engine**: Google Cloud Platform deployments
-- **VMware vSphere**: (convert QEMU)
-
-## Configuration
-
-### Variables
-
-Key variables can be configured through:
-1. Environment variables
-2. `.pkrvars.hcl` files
-3. Command-line flags
-
-Common variables:
-
-```hcl
-# Cloud Platform
-gcp_project_id = "your-project-id"
-aws_region = "us-east-1"
-
-# Image Settings
-disk_size_gb = 30
-vm_guest_os_cloudinit = true
-
-# User Configuration
-build_username = "packer"
-ansible_username = "ansible"
-
-# Cleanup
-cleanup_final_image = true  # Remove build artifacts from final image
-```
+| OS | Version | Platform | Status |
+|---|---------|----------|---------|
+| Ubuntu | 22.04 LTS | QEMU | ✅ Working |
+| Ubuntu | 22.04 LTS | GCP | ✅ Working |
+| Ubuntu | 22.04 LTS | AWS | 🚧 Template exists |
+| Rocky Linux | 9.4 | QEMU | ✅ Working |
+| Rocky Linux | 9.4 | AWS | 🚧 Template exists |
 
 ## Building Images
 
-### Using Just (Recommended)
+### QEMU Build (Local Testing)
 
 ```bash
-# List available commands
-just
+# Ubuntu QEMU build
+packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 
-# Build Ubuntu for all platforms
-just build-ubuntu-all
-
-# Build Rocky for QEMU only
-just build-rocky-qemu
-
-# Clean build artifacts
-just clean
+# Rocky Linux QEMU build  
+packer build builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl
 ```
 
-### Direct Packer Commands
+### GCP Build
 
 ```bash
-# Validate template
-packer validate builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl
-
-# Build with variables
-packer build \
-  -var "gcp_project_id=my-project" \
-  -var "cleanup_final_image=true" \
+# Requires: gcloud auth application-default login
+packer build -var "gcp_project_id=your-project" \
   builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl
 ```
+
+### Build Outputs
+
+- QEMU builds: `artifacts/qemu/[os-version]/`
+  - `.qcow2` - QEMU image
+  - `.vmdk` - VMware disk
+  - `.vhd` - Hyper-V disk
+  - `.ovf` - Open Virtualization Format
 
 ## Ansible Roles
 
 ### base
-- Updates the operating system
+- Updates all packages to latest
 - Installs essential packages
-- Configures cloud-init (if enabled)
+- Configures cloud-init (when enabled)
 
-### users
-- Creates system users (packer, ansible, pulsys)
-- Configures SSH keys from GitHub
-- Sets up sudo permissions
-- **Special**: `pulsys` user gets keys from:
+### users  
+- Creates `pulsys` user with sudo access
+- Pulls SSH keys from GitHub for:
+  - Operations staff
+  - Library development staff
   - Ansible Tower
-  - Operations staff (GitHub)
-  - Library staff (GitHub)
+- Manages build users (`packer`, `ubuntu`)
 
 ### configure
-- Sets up SSH for public key authentication
-- Configures hostname and networking
-- Manages systemd services
-- Prepares cloud-init datasources
+- Enables SSH public key authentication
+- Sets hostname to `localhost`
+- Configures cloud-init datasources
+- Regenerates SSH host keys on first boot
 
 ### clean
 - Removes temporary files and logs
-- Cleans SSH host keys (regenerated on first boot)
-- Removes build users (optional)
-- Truncates machine-id for unique instances
+- Cleans build artifacts
+- Optionally removes build users
+- Clears machine-id for uniqueness
 
 ## User Management
 
-### pulsys User
+### pulsys Administrative User
 
-The `pulsys` user is a special administrative account with dynamically managed SSH keys pulled from GitHub:
+The `pulsys` user is automatically created with SSH keys from:
 
 ```yaml
-# In ansible/roles/users/defaults/main.yml
+# ansible/roles/users/defaults/main.yml
 ops_github_keys:
   - https://github.com/acozine.keys
   - https://github.com/kayiwa.keys
-  # ... more ops staff
+  # ... additional ops staff
 
-library_github_keys:
+library_github_keys:  
   - https://github.com/escowles.keys
   - https://github.com/hackartisan.keys
-  # ... more library staff
+  # ... additional library staff
 ```
 
-Keys are automatically fetched and installed during the build process.
+To add/remove users, update the lists in `ansible/roles/users/defaults/main.yml`.
 
-### Build vs. Runtime Users
+### Build Cleanup
 
-- **Build-time users** (`packer`, `ubuntu`, etc.): Can be removed with `cleanup_final_image=true`
-- **Runtime users** (`pulsys`, `root`): Always preserved
-- **Protected users**: Defined in `users_keep_always` variable
+Set `cleanup_final_image=true` to remove build users from the final image:
+```bash
+packer build -var "cleanup_final_image=true" [template]
+```
 
-## Testing
+Protected users (`root`, `pulsys`) are never removed.
 
-### Local Testing with QEMU
+## Testing Images
+
+### Local QEMU Testing
 
 ```bash
-# Build a test image
-just build-ubuntu-qemu
-
-# Test the image with QEMU
+# Boot the image
 qemu-system-x86_64 \
   -m 2048 \
-  -drive file=artifacts/qemu/linux-ubuntu-22.04-lts-*/linux-ubuntu-22.04-lts-*.qcow2,format=qcow2 \
-  -enable-kvm
+  -drive file=artifacts/qemu/linux-ubuntu-*/linux-ubuntu-*.qcow2,format=qcow2 \
+  -enable-kvm \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device e1000,netdev=net0
+
+# SSH into the VM (in another terminal)
+ssh -p 2222 pulsys@localhost
 ```
 
-### Validation
+## Configuration Variables
 
-```bash
-# Validate all Packer templates
-for template in builds/linux/*/*.pkr.hcl; do
-  echo "Validating $template"
-  packer validate "$template"
-done
+Common Packer variables:
 
-# Lint Ansible playbooks
-ansible-lint ansible/
+```hcl
+# User settings
+build_username = "packer"
+ansible_username = "packer" 
+build_key = "ssh-rsa ..."     # SSH key for build user
+ansible_key = "ssh-rsa ..."   # SSH key for ansible user
+
+# Image settings
+disk_size = 30                # GB
+vm_guest_os_cloudinit = true  # Enable cloud-init
+
+# Cleanup
+cleanup_final_image = true    # Remove build artifacts
 ```
-
-## CI/CD
-
-Build manifests are automatically generated in `manifests/` with:
-- Build timestamp
-- Git commit hash
-- Image metadata
-- Platform-specific details
-
-Example manifest:
-```json
-{
-  "builds": [{
-    "artifact_id": "img-linux-ubuntu-22-04-lts-abc123",
-    "build_date": "2025-09-19 19:17:41",
-    "build_version": "i163_new_standard",
-    "custom_data": {
-      "enable_cloudinit": true,
-      "disk_size_gb": 30,
-      "image_family": "linux-ubuntu-2204"
-    }
-  }]
-}
-```
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## Troubleshooting
 
-### Common Issues
+### ISO Checksum Error
+**Problem**: `invalid checksum: encoding/hex: invalid byte`  
+**Solution**: Download the ISO and update the checksum in the `.pkr.hcl` file
 
-**Issue**: Build fails with "SSH timeout"
-- **Solution**: Increase `communicator_timeout` variable
+### SSH Timeout During Build
+**Problem**: Packer can't connect to the VM  
+**Solution**: Check QEMU is working and increase `ssh_timeout`
 
-**Issue**: Cloud-init not working
-- **Solution**: Ensure `enable_cloudinit=true` and check datasource configuration
+### Missing Dependencies
+**Problem**: Command not found errors  
+**Solution**: Use `devbox shell` or install missing tools manually
 
-**Issue**: Missing dependencies in Devbox
-- **Solution**: Run `devbox update` to refresh packages
+### Build Users Remain in Image
+**Problem**: `ubuntu` or `packer` users still present  
+**Solution**: Set `-var "cleanup_final_image=true"` during build
 
-**Issue**: pulsys keys not updating
-- **Solution**: Check GitHub URLs are accessible and users have public keys
+## Build Manifests
+
+Each build generates a manifest in `manifests/` containing:
+- Build timestamp
+- Git commit hash  
+- Image metadata
+- Custom variables used
+
+Example: `manifests/2025-09-19 19:17:41.json`
+
+## Contributing
+
+1. Create a feature branch
+2. Test changes locally with QEMU
+3. Validate Packer templates: `packer validate [template]`
+4. Submit pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-This project is licensed under the terms specified in the [LICENSE](LICENSE) file.
+See [LICENSE](LICENSE) file for details.
 
 ---
 
 **Maintained by**: Princeton University Library Operations Team  
+**Repository**: https://github.com/pulibrary/vm-builds
