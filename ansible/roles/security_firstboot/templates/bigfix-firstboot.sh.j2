@@ -15,6 +15,11 @@ if [[ -f "$MARKER" ]]; then
   exit 0
 fi
 
+if [[ -z "${BIGFIX_MASTHEAD_URL}" ]]; then
+  echo "BigFix: no BIGFIX_MASTHEAD_URL provided; skipping install."
+  exit 0
+fi
+
 mkdir -p /opt/BESClient
 
 # Prefer embedded masthead if provided

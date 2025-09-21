@@ -1,6 +1,6 @@
 ---
 # Only prepares first-boot installers; does NOT install during image build
-security_env_file: /etc/pul/security.env
+security_env_file: /etc/pul/security-tools.env
 prepare_security_firstboot: true
 
 # Where the first-boot scripts read secrets/params (written by cloud-init)
