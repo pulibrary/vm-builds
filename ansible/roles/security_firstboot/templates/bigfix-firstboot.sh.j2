@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+set -euo pipefail
+
+STATE_DIR="/var/lib/security-firstboot"
+MARKER="${STATE_DIR}/bigfix.done"
+
+# choose OS family
+OS_FAMILY="$(. /etc/os-release; echo "${ID_LIKE:-$ID}")"
+
+# Required: masthead URL must be provided at boot via {{ security_env_file }}
+: "${BIGFIX_MASTHEAD_URL:=}"
+
+if [[ -f "$MARKER" ]]; then
+  exit 0
+fi
+
+mkdir -p /etc/opt/BESClient
+
+if [[ -n "$BIGFIX_MASTHEAD_URL" ]]; then
+  curl -fsSL "$BIGFIX_MASTHEAD_URL" -o /etc/opt/BESClient/actionsite.afxm
+  chmod 0600 /etc/opt/BESClient/actionsite.afxm
+fi
+
+if command -v rpm >/dev/null 2>&1; then
+  curl -fsSL "{{ bigfix_gpg_key_url }}" | rpm --import -
+  curl -fsSL "{{ bigfix_rpm_url }}" -o /tmp/BESAgent.rpm
+  dnf -y install /tmp/BESAgent.rpm || yum -y install /tmp/BESAgent.rpm
+elif command -v dpkg >/dev/null 2>&1; then
+  curl -fsSL "{{ bigfix_deb_url }}" -o /tmp/BESAgent.deb
+  apt-get update -y || true
+  apt-get -y install /tmp/BESAgent.deb
+else
+  echo "Unknown platform for BigFix install" >&2
+  exit 1
+fi
+
+# service name varies; try both
+systemctl enable besclient.service 2>/dev/null || true
+systemctl enable besclient 2>/dev/null || true
+systemctl restart besclient.service 2>/dev/null || systemctl restart besclient || true
+
+touch "$MARKER"
+exit 0

@@ -1,0 +1,25 @@
+---
+# Only prepares first-boot installers; does NOT install during image build
+prepare_security_firstboot: true
+
+# Where the first-boot scripts read secrets/params (written by cloud-init)
+security_env_file: /etc/security-tools.env
+
+# Optional defaults (can be overridden / provided by cloud-init)
+bigfix_masthead_url: "{{ lookup('env', 'BIGFIX_MASTHEAD_URL') | default('', true) }}"
+rapid7_activation_token: "{{ lookup('env', 'RAPID7_TOKEN') | default('', true) }}"
+rapid7_activation_attributes: "{{ lookup('env', 'RAPID7_ATTRIBUTES') | default('Library Systems', true) }}"
+
+# Download URLs chosen by OS at runtime
+bigfix_deb_url: "https://software.bigfix.com/download/bes/100/BESAgent-10.0.7.52-debian6.amd64.deb"
+bigfix_rpm_url: "https://software.bigfix.com/download/bes/100/BESAgent-10.0.7.52-rhe6.x86_64.rpm"
+bigfix_gpg_key_url: "https://software.bigfix.com/download/bes/95/RPM-GPG-KEY-BigFix-9-V2"
+
+rapid7_deb_url: "https://isoshare.cpaneldev.princeton.edu/isoShares/Agents/Rapid7/Latest/Linux/rapid7-insight-agent_latest_amd64.deb"
+rapid7_rpm_url: "https://isoshare.cpaneldev.princeton.edu/isoShares/Agents/Rapid7/Latest/Linux/rapid7-insight-agent-latest.x86_64.rpm"
+rapid7_rpm_pubkey: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/Rapid7_public_key.pub"
+
+# CrowdStrike Falcon (first-boot)
+falcon_sensor_deb_url: ""     # can we try a temporary pre-signed/package URL for Debian/Ubuntu
+falcon_sensor_rpm_url: ""     # can we try a temporary pre-signed/package URL for RHEL/Rocky
+falcon_api_base: "https://api.crowdstrike.com"

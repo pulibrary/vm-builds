@@ -1,5 +1,5 @@
 # Use Bash for all recipes
-
+set dotenv-load := true
 set shell := ["bash", "-c"]
 
 # ─── Paths (match your repo) ────────────────────────────────────────────────

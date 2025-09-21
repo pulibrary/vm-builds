@@ -18,7 +18,7 @@ devbox shell
 
 This will automatically install all required tools:
 - Packer
-- Ansible  
+- Ansible
 - Python
 - AWS CLI v2
 - Google Cloud SDK
@@ -68,19 +68,37 @@ just build-rocky-aws
 just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 
 ```
+
+## Secrets & config
+
+Copy `.env.example` to `.env` and fill in values. These are read by Packer:
+
+- `BIGFIX_MASTHEAD_URL`
+- `RAPID7_TOKEN`
+- `RAPID7_ATTRIBUTES`
+- `FALCON_CID`
+
+### Build
+```bash
+set -a; source .env; set +a
+just build-ubuntu-aws
+# or
+just build-rocky-qemu 'sha256:<rocky sha256>' true
+```
+
 ## Project Structure
 
 ```
 .
 ├── ansible/                   # Ansible provisioning
-│   ├── roles/                
+│   ├── roles/
 │   │   ├── base/            # OS updates and packages
 │   │   ├── users/           # User and SSH key management
 │   │   ├── configure/       # System configuration
 │   │   └── clean/           # Image cleanup
 │   └── linux-playbook.yml   # Main playbook
 ├── artifacts/                # Build outputs (git-ignored)
-├── builds/                  
+├── builds/
 │   └── linux/
 │       ├── rocky/           # Rocky Linux configs
 │       └── ubuntu/          # Ubuntu configs
@@ -106,7 +124,7 @@ just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 # Ubuntu QEMU build
 packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 
-# Rocky Linux QEMU build  
+# Rocky Linux QEMU build
 packer build builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl
 ```
 
@@ -133,7 +151,7 @@ packer build -var "gcp_project_id=pul-gcdc" \
 - Installs essential packages
 - Configures cloud-init (when enabled)
 
-### users  
+### users
 - Creates `pulsys` user with sudo access
 - Pulls SSH keys from GitHub for:
   - Operations staff
@@ -166,7 +184,7 @@ ops_github_keys:
   - https://github.com/kayiwa.keys
   # ... additional ops staff
 
-library_github_keys:  
+library_github_keys:
   - https://github.com/escowles.keys
   - https://github.com/hackartisan.keys
   # ... additional library staff
@@ -206,7 +224,7 @@ Common Packer variables:
 ```hcl
 # User settings
 build_username = "packer"
-ansible_username = "packer" 
+ansible_username = "packer"
 build_key = "ssh-rsa ..."     # SSH key for build user
 ansible_key = "ssh-rsa ..."   # SSH key for ansible user
 
@@ -221,26 +239,26 @@ cleanup_final_image = true    # Remove build artifacts
 ## Troubleshooting
 
 ### ISO Checksum Error
-**Problem**: `invalid checksum: encoding/hex: invalid byte`  
+**Problem**: `invalid checksum: encoding/hex: invalid byte`
 **Solution**: Download the ISO and update the checksum in the `.pkr.hcl` file
 
 ### SSH Timeout During Build
-**Problem**: Packer can't connect to the VM  
+**Problem**: Packer can't connect to the VM
 **Solution**: Check QEMU is working and increase `ssh_timeout`
 
 ### Missing Dependencies
-**Problem**: Command not found errors  
+**Problem**: Command not found errors
 **Solution**: Use `devbox shell` or install missing tools manually
 
 ### Build Users Remain in Image
-**Problem**: `ubuntu` or `packer` users still present  
+**Problem**: `ubuntu` or `packer` users still present
 **Solution**: Set `-var "cleanup_final_image=true"` during build
 
 ## Build Manifests
 
 Each build generates a manifest in `manifests/` containing:
 - Build timestamp
-- Git commit hash  
+- Git commit hash
 - Image metadata
 - Custom variables used
 

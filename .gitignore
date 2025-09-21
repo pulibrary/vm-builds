@@ -35,6 +35,9 @@ manifests/
 packer_cache/
 output-*/
 
+# Local config
+.env
+
 # Log files
 *.log
 

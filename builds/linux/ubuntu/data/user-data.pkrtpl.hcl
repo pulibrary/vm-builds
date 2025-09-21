@@ -36,6 +36,20 @@ write_files:
     permissions: "0644"
     content: |
       datasource_list: [ NoCloud, None ]
+  - path: /etc/security-tools.env
+    permissions: '0600'
+    content: |
+      # BigFix
+      BIGFIX_MASTHEAD_URL=${BIGFIX_MASTHEAD_URL}
+      # Rapid7
+      RAPID7_TOKEN=${RAPID7_TOKEN}
+      RAPID7_ATTRIBUTES=Library Systems
+      # CrowdStrike Falcon
+      FALCON_CID=${FALCON_CID}
+runcmd:
+  - systemctl start bigfix-firstboot.service || true
+  - systemctl start rapid7-firstboot.service || true
+  - systemctl start falcon-firstboot.service || true
 
 # Locales & timezone
 timezone: ${vm_guest_os_timezone}

@@ -385,6 +385,12 @@ variable "common_hcp_packer_registry_enabled" {
   default = false
 }
 
+// security_role
+variable "prepare_security_firstboot" {
+  type    = bool
+  default = true
+}
+
 ////////////////////
 // Data & Locals  //
 ////////////////////
@@ -525,6 +531,7 @@ build {
       "--extra-vars", "ansible_key='${var.ansible_key}'",
       "--extra-vars", "enable_cloudinit=${var.vm_guest_os_cloudinit}",
       "--extra-vars", "cleanup_final_image=true",
+      "--extra-vars", "prepare_security_firstboot=${var.prepare_security_firstboot}",
       "--forks", "1"
     ]
   }

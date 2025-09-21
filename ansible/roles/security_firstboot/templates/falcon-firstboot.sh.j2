@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+set -euo pipefail
+
+STATE_DIR="/var/lib/security-firstboot"
+MARKER="${STATE_DIR}/falcon.done"
+
+# Required: Falcon CID (like ABCDEFGHIJKLMNOPQRST-00)
+: "${FALCON_CID:=}"
+
+# Optional (two ways to obtain a package):
+# 1) Pre-signed / internal URLs:
+FALCON_RPM_URL="${FALCON_RPM_URL:-{{ falcon_sensor_rpm_url }}}"
+FALCON_DEB_URL="${FALCON_DEB_URL:-{{ falcon_sensor_deb_url }}}"
+# 2) CrowdStrike API (needs client id/secret with Sensor Download scope):
+FALCON_CLIENT_ID="${FALCON_CLIENT_ID:-}"
+FALCON_CLIENT_SECRET="${FALCON_CLIENT_SECRET:-}"
+FALCON_API_BASE="${FALCON_API_BASE:-{{ falcon_api_base }}}"
+
+FALCON_TAGS="${FALCON_TAGS:-}"  # optional comma-separated
+PKG_PATH=""
+
+if [[ -f "$MARKER" ]]; then
+  exit 0
+fi
+
+if [[ -z "$FALCON_CID" ]]; then
+  echo "Falcon: FALCON_CID not provided; skipping install." >&2
+  exit 0
+fi
+
+download_with_api() {
+  # Get OAuth2 token
+  local token
+  token="$(curl -fsS -X POST "${FALCON_API_BASE}/oauth2/token" \
+    -d "client_id=${FALCON_CLIENT_ID}" \
+    -d "client_secret=${FALCON_CLIENT_SECRET}" \
+    | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')"
+
+  # Figure out platform package (rpm vs deb)
+  if command -v rpm >/dev/null 2>&1; then
+    # Latest RHEL-based x86_64 sensor
+    curl -fsS -H "Authorization: Bearer ${token}" \
+      -o /tmp/falcon-sensor.rpm \
+      "${FALCON_API_BASE}/sensors/entities/download-installer/v1?os=RHEL&arch=x86_64"
+    PKG_PATH="/tmp/falcon-sensor.rpm"
+  else
+    # Latest Debian-based x86_64 sensor
+    curl -fsS -H "Authorization: Bearer ${token}" \
+      -o /tmp/falcon-sensor.deb \
+      "${FALCON_API_BASE}/sensors/entities/download-installer/v1?os=Debian&arch=x86_64"
+    PKG_PATH="/tmp/falcon-sensor.deb"
+  fi
+}
+
+# Obtain package (prefer explicit URL, else API if creds present)
+if command -v rpm >/dev/null 2>&1; then
+  if [[ -n "$FALCON_RPM_URL" ]]; then
+    curl -fsSL "$FALCON_RPM_URL" -o /tmp/falcon-sensor.rpm
+    PKG_PATH="/tmp/falcon-sensor.rpm"
+  elif [[ -n "$FALCON_CLIENT_ID" && -n "$FALCON_CLIENT_SECRET" ]]; then
+    download_with_api
+  else
+    echo "Falcon: No RPM URL or API creds available; skipping." >&2
+    exit 0
+  fi
+else
+  if [[ -n "$FALCON_DEB_URL" ]]; then
+    curl -fsSL "$FALCON_DEB_URL" -o /tmp/falcon-sensor.deb
+    PKG_PATH="/tmp/falcon-sensor.deb"
+  elif [[ -n "$FALCON_CLIENT_ID" && -n "$FALCON_CLIENT_SECRET" ]]; then
+    download_with_api
+  else
+    echo "Falcon: No DEB URL or API creds available; skipping." >&2
+    exit 0
+  fi
+fi
+
+# Install
+if [[ "$PKG_PATH" == *.rpm ]]; then
+  dnf -y install "$PKG_PATH" || yum -y install "$PKG_PATH"
+elif [[ "$PKG_PATH" == *.deb ]]; then
+  apt-get update -y || true
+  apt-get -y install "$PKG_PATH"
+else
+  echo "Falcon: Unknown package format: $PKG_PATH" >&2
+  exit 1
+fi
+
+# Configure and start
+if [[ -x /opt/CrowdStrike/falconctl ]]; then
+  /opt/CrowdStrike/falconctl -s --cid="${FALCON_CID}"
+  if [[ -n "$FALCON_TAGS" ]]; then
+    /opt/CrowdStrike/falconctl -s --tags="${FALCON_TAGS}"
+  fi
+fi
+
+systemctl enable --now falcon-sensor || true
+
+touch "$MARKER"
+exit 0

@@ -1,0 +1,13 @@
+---
+- name: systemd-daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: enable-firstboot-services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - bigfix-firstboot.service
+    - rapid7-firstboot.service
+    - falcon-firstboot.service

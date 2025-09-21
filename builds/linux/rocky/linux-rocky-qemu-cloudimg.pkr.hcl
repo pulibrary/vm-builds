@@ -186,7 +186,7 @@ variable "vm_disk_lvm" {
   default = []
 }
 
-// Optional export knobs
+// export knobs
 variable "compress_qcow2" {
   type    = bool
   default = false
@@ -322,6 +322,12 @@ variable "common_hcp_packer_registry_enabled" {
   default = false
 }
 
+// security_role
+variable "prepare_security_firstboot" {
+  type    = bool
+  default = true
+}
+
 ////////////////////
 // Data & Locals  //
 ////////////////////
@@ -347,7 +353,6 @@ locals {
   // Which qcow2 to publish (.qcow2 or .qcow2.gz)
   qcow2_artifact = var.compress_qcow2 ? "${local.vm_name}.qcow2.gz" : "${local.vm_name}.qcow2"
 
-  // cloud-init seed (NoCloud)
   // cloud-init seed (NoCloud)
   data_source_content = {
     "/meta-data" = templatefile("${abspath(path.root)}/data/meta-data.pkrtpl.hcl", {
@@ -463,6 +468,8 @@ build {
       "--extra-vars", "ansible_key='${var.ansible_key}'",
       "--extra-vars", "enable_cloudinit=${var.vm_guest_os_cloudinit}",
       "--extra-vars", "cleanup_final_image=true",
+      "--extra-vars", "prepare_security_firstboot=${var.prepare_security_firstboot}",
+      "--forks", "1"
     ]
   }
 
