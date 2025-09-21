@@ -328,6 +328,27 @@ variable "prepare_security_firstboot" {
   default = true
 }
 
+variable "BIGFIX_MASTHEAD_URL" {
+  type    = string
+  default = env("BIGFIX_MASTHEAD_URL")
+}
+
+variable "RAPID7_TOKEN" {
+  type    = string
+  default = env("RAPID7_TOKEN")
+}
+
+variable "RAPID7_ATTRIBUTES" {
+  type    = string
+  default = env("RAPID7_ATTRIBUTES")
+}
+
+variable "FALCON_CID" {
+  type    = string
+  default = env("FALCON_CID")
+}
+
+
 ////////////////////
 // Data & Locals  //
 ////////////////////
@@ -353,37 +374,43 @@ locals {
   // Which qcow2 to publish (.qcow2 or .qcow2.gz)
   qcow2_artifact = var.compress_qcow2 ? "${local.vm_name}.qcow2.gz" : "${local.vm_name}.qcow2"
 
+  user_data_vars = { vm_guest_os_name = var.vm_guest_os_name
+    build_username           = var.build_username
+    build_password           = var.build_password
+    build_password_encrypted = var.build_password_encrypted
+    build_key                = var.build_key
+    vm_guest_os_language     = var.vm_guest_os_language
+    vm_guest_os_keyboard     = var.vm_guest_os_keyboard
+    vm_guest_os_timezone     = var.vm_guest_os_timezone
+    vm_disk_device           = var.vm_disk_device
+    network = templatefile("${abspath(path.root)}/data/network.pkrtpl.hcl", {
+      device  = var.vm_network_device
+      ip      = var.vm_ip_address
+      netmask = var.vm_ip_netmask
+      gateway = var.vm_ip_gateway
+      dns     = var.vm_dns_list
+    })
+    storage = templatefile("${abspath(path.root)}/data/storage.pkrtpl.hcl", {
+      device     = var.vm_disk_device
+      swap       = var.vm_disk_use_swap
+      partitions = var.vm_disk_partitions
+      lvm        = var.vm_disk_lvm
+    })
+    additional_packages = var.additional_packages
+
+    # the security first-boot vars
+    BIGFIX_MASTHEAD_URL = var.BIGFIX_MASTHEAD_URL
+    RAPID7_TOKEN        = var.RAPID7_TOKEN
+    RAPID7_ATTRIBUTES   = var.RAPID7_ATTRIBUTES
+    FALCON_CID          = var.FALCON_CID
+  }
   // cloud-init seed (NoCloud)
   data_source_content = {
     "/meta-data" = templatefile("${abspath(path.root)}/data/meta-data.pkrtpl.hcl", {
       vm_guest_os_name    = var.vm_guest_os_name
       vm_guest_os_version = var.vm_guest_os_version
-    })
-    "/user-data" = templatefile("${abspath(path.root)}/data/user-data.pkrtpl.hcl", {
-      vm_guest_os_name         = var.vm_guest_os_name
-      build_username           = var.build_username
-      build_password           = var.build_password
-      build_password_encrypted = var.build_password_encrypted
-      build_key                = var.build_key
-      vm_guest_os_language     = var.vm_guest_os_language
-      vm_guest_os_keyboard     = var.vm_guest_os_keyboard
-      vm_guest_os_timezone     = var.vm_guest_os_timezone
-      vm_disk_device           = var.vm_disk_device
-      network = templatefile("${abspath(path.root)}/data/network.pkrtpl.hcl", {
-        device  = var.vm_network_device
-        ip      = var.vm_ip_address
-        netmask = var.vm_ip_netmask
-        gateway = var.vm_ip_gateway
-        dns     = var.vm_dns_list
-      })
-      storage = templatefile("${abspath(path.root)}/data/storage.pkrtpl.hcl", {
-        device     = var.vm_disk_device
-        swap       = var.vm_disk_use_swap
-        partitions = var.vm_disk_partitions
-        lvm        = var.vm_disk_lvm
-      })
-      additional_packages = var.additional_packages
-    })
+    }),
+    "/user-data" = templatefile("${abspath(path.root)}/data/user-data.pkrtpl.hcl", local.user_data_vars)
   }
 
   // HTTP seed variant

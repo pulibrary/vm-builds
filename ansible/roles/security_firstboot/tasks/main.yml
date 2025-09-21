@@ -2,14 +2,14 @@
 - name: Exit early if role disabled
   when: not prepare_security_firstboot | bool
   ansible.builtin.meta: end_play
-  tags: ['firstboot']
+  tags: ["firstboot"]
 
 - name: Create state dir for first-boot markers
   ansible.builtin.file:
     path: /var/lib/security-firstboot
     state: directory
     mode: "0755"
-  tags: ['firstboot']
+  tags: ["firstboot"]
 
 - name: Ensure env file exists (cloud-init will overwrite/populate at launch)
   ansible.builtin.copy:
@@ -21,9 +21,9 @@
       # populated by cloud-init user-data on first boot
       # BIGFIX_MASTHEAD_URL=
       # RAPID7_TOKEN=
-      # RAPID7_ATTRIBUTES=Library Systems
-  force: no
-  tags: ['firstboot']
+      # RAPID7_ATTRIBUTES="Library Systems"
+    force: no
+  tags: ["firstboot"]
 
 - name: Install first-boot helper scripts
   ansible.builtin.template:
@@ -31,9 +31,19 @@
     dest: "{{ item.dest }}"
     mode: "0755"
   loop:
-    - { src: 'bigfix-firstboot.sh.j2',  dest: '/usr/local/sbin/bigfix-firstboot.sh' }
-    - { src: 'rapid7-firstboot.sh.j2',  dest: '/usr/local/sbin/rapid7-firstboot.sh' }
-  tags: ['firstboot']
+    - {
+        src: "bigfix-firstboot.sh.j2",
+        dest: "/usr/local/sbin/bigfix-firstboot.sh",
+      }
+    - {
+        src: "rapid7-firstboot.sh.j2",
+        dest: "/usr/local/sbin/rapid7-firstboot.sh",
+      }
+    - {
+        src: "falcon-firstboot.sh.j2",
+        dest: "/usr/local/sbin/falcon-firstboot.sh",
+      }
+  tags: ["firstboot"]
 
 - name: Install systemd units (oneshot; run once on first boot)
   ansible.builtin.copy:
@@ -51,7 +61,7 @@
 
         [Service]
         Type=oneshot
-        EnvironmentFile={{ security_env_file }}
+        EnvironmentFile=-{{ security_env_file }}
         ExecStart=/usr/local/sbin/bigfix-firstboot.sh
         RemainAfterExit=yes
 
@@ -67,8 +77,24 @@
 
         [Service]
         Type=oneshot
-        EnvironmentFile={{ security_env_file }}
+        EnvironmentFile=-{{ security_env_file }}
         ExecStart=/usr/local/sbin/rapid7-firstboot.sh
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+    - name: falcon-firstboot.service
+      content: |
+        [Unit]
+        Description=CrowdStrike Falcon first-boot installer
+        After=network-online.target cloud-final.service
+        Wants=network-online.target
+        ConditionPathExists=!/var/lib/security-firstboot/falcon.done
+
+        [Service]
+        Type=oneshot
+        EnvironmentFile=-{{ security_env_file }}
+        ExecStart=/usr/local/sbin/falcon-firstboot.sh
         RemainAfterExit=yes
 
         [Install]
@@ -76,36 +102,4 @@
   notify:
     - systemd-daemon-reload
     - enable-firstboot-services
-  tags: ['firstboot']
-
-- name: Install falcon first-boot helper
-  ansible.builtin.template:
-    src: "falcon-firstboot.sh.j2"
-    dest: "/usr/local/sbin/falcon-firstboot.sh"
-    mode: "0755"
-  tags: ['firstboot']
-
-- name: Install falcon systemd unit
-  ansible.builtin.copy:
-    dest: "/etc/systemd/system/falcon-firstboot.service"
-    mode: "0644"
-    content: |
-      [Unit]
-      Description=CrowdStrike Falcon first-boot installer
-      After=network-online.target cloud-final.service
-      Wants=network-online.target
-      ConditionPathExists=!/var/lib/security-firstboot/falcon.done
-
-      [Service]
-      Type=oneshot
-      EnvironmentFile={{ security_env_file }}
-      ExecStart=/usr/local/sbin/falcon-firstboot.sh
-      RemainAfterExit=yes
-
-      [Install]
-      WantedBy=multi-user.target
-  notify:
-    - systemd-daemon-reload
-    - enable-firstboot-services
-  tags: ['firstboot']
-
+  tags: ["firstboot"]

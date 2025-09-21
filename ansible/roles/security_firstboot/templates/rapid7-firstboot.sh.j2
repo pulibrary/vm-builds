@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
 # {{ ansible_managed | comment }}
+#
 set -euo pipefail
 
 STATE_DIR="/var/lib/security-firstboot"
 MARKER="${STATE_DIR}/rapid7.done"
+OS_FAMILY="$(. /etc/os-release; echo "${ID_LIKE:-$ID}")"
 
 : "${RAPID7_TOKEN:=}"
-RAPID7_ATTRS="${RAPID7_ATTRIBUTES:-{{ rapid7_activation_attributes }}}"
 
-if [[ -f "$MARKER" ]]; then
-  exit 0
-fi
+if [[ -f "$MARKER" ]]; then exit 0; fi
 
-if command -v rpm >/dev/null 2>&1; then
-  curl -fsSL "{{ rapid7_rpm_pubkey }}" | rpm --import -
-  curl -fsSL "{{ rapid7_rpm_url }}" -o /tmp/rapid7.rpm
-  dnf -y install /tmp/rapid7.rpm || yum -y install /tmp/rapid7.rpm
-elif command -v dpkg >/dev/null 2>&1; then
-  curl -fsSL "{{ rapid7_deb_url }}" -o /tmp/rapid7.deb
-  apt-get update -y || true
-  apt-get -y install /tmp/rapid7.deb
+if command -v dpkg >/dev/null 2>&1; then
+  if [[ -n "${RAPID7_DEB_URL:-}" ]]; then
+    if ! curl -fsSL --retry 3 --retry-delay 2 "$RAPID7_DEB_URL" -o /tmp/rapid7.deb; then
+      echo "Rapid7: cannot fetch DEB ($RAPID7_DEB_URL); skipping."
+      exit 0
+    fi
+    apt-get update -y || true
+    apt-get -y install /tmp/rapid7.deb || { echo "Rapid7: install failed; skipping."; exit 0; }
+  else
+    echo "Rapid7: no RAPID7_DEB_URL provided; skipping."
+    exit 0
+  fi
 else
-  echo "Unknown platform for Rapid7 install" >&2
-  exit 1
-fi
-
-# Activate if a token was provided via /etc/security-tools.env
-if [[ -n "${RAPID7_TOKEN}" ]]; then
-  if [[ -x /opt/rapid7/ir_agent/ir_agent ]]; then
-    /opt/rapid7/ir_agent/ir_agent activate --token "${RAPID7_TOKEN}" --attributes "${RAPID7_ATTRS}" || true
-  elif [[ -x /opt/rapid7/ir_agent/components/insight_agent/*/configure_agent.sh ]]; then
-    CFG="$(ls -1 /opt/rapid7/ir_agent/components/insight_agent/*/configure_agent.sh | head -n1)"
-    bash "$CFG" --token "${RAPID7_TOKEN}" --attributes "${RAPID7_ATTRS}" || true
+  # RHEL-like
+  if [[ -n "${RAPID7_RPM_URL:-}" ]]; then
+    if ! curl -fsSL --retry 3 --retry-delay 2 "$RAPID7_RPM_URL" -o /tmp/rapid7.rpm; then
+      echo "Rapid7: cannot fetch RPM ($RAPID7_RPM_URL); skipping."
+      exit 0
+    fi
+    dnf -y install /tmp/rapid7.rpm || yum -y install /tmp/rapid7.rpm || { echo "Rapid7: install failed; skipping."; exit 0; }
+  else
+    echo "Rapid7: no RAPID7_RPM_URL provided; skipping."
+    exit 0
   fi
 fi
 
-systemctl enable ir_agent || true
-systemctl restart ir_agent || true
-
+systemctl enable --now ir_agent.service 2>/dev/null || true
 touch "$MARKER"
 exit 0

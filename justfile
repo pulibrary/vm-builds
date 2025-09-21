@@ -1,8 +1,9 @@
 # Use Bash for all recipes
+
 set dotenv-load := true
 set shell := ["bash", "-c"]
 
-# ─── Paths (match your repo) ────────────────────────────────────────────────
+# ─── Paths (match repo) ────────────────────────────────────────────────
 
 ubuntu_qemu_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl"
 ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
@@ -51,7 +52,7 @@ validate-ubuntu-gcp project_id='': init-ubuntu-gcp
     @echo "PACKER: Validating Ubuntu GCP template (project_id={{ project_id }})"
     [[ -n "{{ project_id }}" ]] && packer validate -var "gcp_project_id={{ project_id }}" {{ ubuntu_gcp_tpl }} || packer validate {{ ubuntu_gcp_tpl }}
 
-# Rocky QEMU requires iso_checksum too
+# Rocky QEMU requires an iso_checksum
 validate-rocky-qemu iso_checksum: init-rocky-qemu
     @echo "PACKER: Validating Rocky QEMU template"
     [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Rocky (e.g. sha256:...)" >&2; exit 1)
@@ -70,7 +71,7 @@ validate-all ubuntu_iso_checksum rocky_iso_checksum:
     just validate-rocky-aws
     @echo "PACKER: All templates validated."
 
-# ─── Cloud-Init schema checks (optional) ────────────────────────────────────
+# ─── Cloud-Init schema checks (optional useful debugging) ────────────────────────────────────
 validate-cloudinit-ubuntu:
     @echo "CLOUD-INIT: Validating Ubuntu user-data (best-effort)"
     if command -v cloud-init >/dev/null; then cloud-init schema -c {{ ubuntu_cloudinit_user_data }} || echo "Skip: template rendering may be required"; else echo "cloud-init not installed, skipping."; fi
@@ -89,36 +90,31 @@ build-ubuntu-qemu iso_checksum export_ovf='false' debug='false' VARS='':
     just validate-ubuntu-qemu {{ iso_checksum }}
     @echo "PACKER: Building Ubuntu QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }} \
-      || PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }}
 
-# Alias for muscle memory
-build-qemu-ubuntu iso_checksum export_ovf='false' debug='false' VARS='':
-    just build-ubuntu-qemu {{ iso_checksum }} {{ export_ovf }} {{ debug }} {{ VARS }}
-
-# Rocky QEMU: requires iso_checksum
-build-rocky-qemu iso_checksum debug='false':
+build-rocky-qemu iso_checksum export_ovf='false' debug='false' VARS='':
     just validate-rocky-qemu {{ iso_checksum }}
     @echo "PACKER: Building Rocky QEMU (debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" {{ rocky_qemu_tpl }} \
-      || PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" {{ rocky_qemu_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }}  {{ rocky_qemu_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ rocky_qemu_tpl }}
 
 # Ubuntu AWS
 build-ubuntu-aws debug='false':
     just validate-ubuntu-aws
     @echo "PACKER: Building Ubuntu AWS (debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && PACKER_LOG=1 packer build -debug -force {{ ubuntu_aws_tpl }} \
-      || PACKER_LOG=1 packer build -force {{ ubuntu_aws_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force {{ ubuntu_aws_tpl }} \
+      || env PACKER_LOG=1 packer build -force {{ ubuntu_aws_tpl }}
 
 # Rocky AWS
 build-rocky-aws debug='false':
     just validate-rocky-aws
     @echo "PACKER: Building Rocky AWS (debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && PACKER_LOG=1 packer build -debug -force {{ rocky_aws_tpl }} \
-      || PACKER_LOG=1 packer build -force {{ rocky_aws_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force {{ rocky_aws_tpl }} \
+      || env PACKER_LOG=1 packer build -force {{ rocky_aws_tpl }}
 
 # Ubuntu GCP: require project id; allow zone/machine type override
 build-ubuntu-gcp project_id zone='us-east1-b' machine_type='e2-standard-2' debug='false':
@@ -126,8 +122,8 @@ build-ubuntu-gcp project_id zone='us-east1-b' machine_type='e2-standard-2' debug
     @echo "PACKER: Building Ubuntu GCP (project_id={{ project_id }}, zone={{ zone }}, type={{ machine_type }}, debug={{ debug }})"
     [[ -n "{{ project_id }}" ]] || (echo "ERROR: project_id is required. Example: just build-ubuntu-gcp project_id=my-gcp-project" >&2; exit 1)
     [[ "{{ debug }}" == "true" ]] \
-      && PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }} \
-      || PACKER_LOG=1 packer build -force        -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }}
 
 # Convenience bundles
 build-all-qemu ubuntu_iso_checksum rocky_iso_checksum:

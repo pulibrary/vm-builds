@@ -15,24 +15,24 @@ if [[ -f "$MARKER" ]]; then
   exit 0
 fi
 
-mkdir -p /etc/opt/BESClient
+mkdir -p /opt/BESClient
 
-if [[ -n "$BIGFIX_MASTHEAD_URL" ]]; then
-  curl -fsSL "$BIGFIX_MASTHEAD_URL" -o /etc/opt/BESClient/actionsite.afxm
-  chmod 0600 /etc/opt/BESClient/actionsite.afxm
-fi
-
-if command -v rpm >/dev/null 2>&1; then
-  curl -fsSL "{{ bigfix_gpg_key_url }}" | rpm --import -
-  curl -fsSL "{{ bigfix_rpm_url }}" -o /tmp/BESAgent.rpm
-  dnf -y install /tmp/BESAgent.rpm || yum -y install /tmp/BESAgent.rpm
-elif command -v dpkg >/dev/null 2>&1; then
-  curl -fsSL "{{ bigfix_deb_url }}" -o /tmp/BESAgent.deb
-  apt-get update -y || true
-  apt-get -y install /tmp/BESAgent.deb
+# Prefer embedded masthead if provided
+if [[ -n "${BIGFIX_MASTHEAD_B64:-}" ]]; then
+  echo "$BIGFIX_MASTHEAD_B64" | base64 -d > /opt/BESClient/actionsite.afxm || {
+    echo "BigFix: failed to decode BIGFIX_MASTHEAD_B64; skipping."
+    exit 0
+  }
+  chmod 0600 /opt/BESClient/actionsite.afxm
+elif [[ -n "${BIGFIX_MASTHEAD_URL:-}" ]]; then
+  if ! curl -fsSL --max-time 75 "$BIGFIX_MASTHEAD_URL" -o /opt/BESClient/actionsite.afxm; then
+    echo "BigFix: cannot fetch masthead from $BIGFIX_MASTHEAD_URL; skipping."
+    exit 0
+  fi
+  chmod 0600 /opt/BESClient/actionsite.afxm
 else
-  echo "Unknown platform for BigFix install" >&2
-  exit 1
+  echo "BigFix: no masthead provided; skipping."
+  exit 0
 fi
 
 # service name varies; try both
