@@ -1,12 +1,11 @@
 ---
 # Only prepares first-boot installers; does NOT install during image build
-security_env_file: /etc/pul/security-tools.env
 prepare_security_firstboot: true
 
 # Where the first-boot scripts read secrets/params (written by cloud-init)
-security_env_file: /etc/security-tools.env
+security_env_file: /etc/pul/security-tools.env
 
-# Optional defaults (can be overridden / provided by cloud-init)
+# provided by cloud-init in packer
 bigfix_masthead_url: "{{ lookup('env', 'BIGFIX_MASTHEAD_URL') | default('', true) }}"
 rapid7_activation_token: "{{ lookup('env', 'RAPID7_TOKEN') | default('', true) }}"
 rapid7_activation_attributes: "{{ lookup('env', 'RAPID7_ATTRIBUTES') | default('Library Systems', true) }}"

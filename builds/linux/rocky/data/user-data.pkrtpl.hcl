@@ -60,6 +60,16 @@ write_files:
     content: |
       SELINUX=enforcing
       SELINUXTYPE=targeted
+  - path: /etc/pul/security-tools.env
+    permissions: '0600'
+    content: |
+      # BigFix
+      BIGFIX_MASTHEAD_URL=${BIGFIX_MASTHEAD_URL}
+      # Rapid7
+      RAPID7_TOKEN=${RAPID7_TOKEN}
+      RAPID7_ATTRIBUTES="Library Systems"
+      # CrowdStrike Falcon
+      FALCON_CID=${FALCON_CID}
 
 runcmd:
   # ensure wheel has passwordless sudo (some images have it already)

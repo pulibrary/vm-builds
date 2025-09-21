@@ -44,9 +44,6 @@ write_files:
       FALCON_CID=${FALCON_CID}
 runcmd:
   - systemctl enable --now ssh || systemctl enable --now sshd
-  - systemctl start bigfix-firstboot.service || true
-  - systemctl start rapid7-firstboot.service || true
-  - systemctl start falcon-firstboot.service || true
 
 # Locales & timezone
 timezone: ${vm_guest_os_timezone}

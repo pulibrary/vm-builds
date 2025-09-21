@@ -55,9 +55,10 @@
       content: |
         [Unit]
         Description=BigFix first-boot installer
-        After=network-online.target cloud-final.service
         Wants=network-online.target
+        After=network-online.target
         ConditionPathExists=!/var/lib/security-firstboot/bigfix.done
+        PartOf=cloud-final.service
 
         [Service]
         Type=oneshot
@@ -66,14 +67,15 @@
         RemainAfterExit=yes
 
         [Install]
-        WantedBy=multi-user.target
+        WantedBy=cloud-final.service
     - name: rapid7-firstboot.service
       content: |
         [Unit]
         Description=Rapid7 first-boot installer
-        After=network-online.target cloud-final.service
         Wants=network-online.target
+        After=network-online.target
         ConditionPathExists=!/var/lib/security-firstboot/rapid7.done
+        PartOf=cloud-final.service
 
         [Service]
         Type=oneshot
@@ -82,14 +84,15 @@
         RemainAfterExit=yes
 
         [Install]
-        WantedBy=multi-user.target
+        WantedBy=cloud-final.service
     - name: falcon-firstboot.service
       content: |
         [Unit]
         Description=CrowdStrike Falcon first-boot installer
-        After=network-online.target cloud-final.service
         Wants=network-online.target
+        After=network-online.target
         ConditionPathExists=!/var/lib/security-firstboot/falcon.done
+        PartOf=cloud-final.service
 
         [Service]
         Type=oneshot
@@ -98,7 +101,7 @@
         RemainAfterExit=yes
 
         [Install]
-        WantedBy=multi-user.target
+        WantedBy=cloud-final.service
   notify:
     - systemd-daemon-reload
     - enable-firstboot-services
