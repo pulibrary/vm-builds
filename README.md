@@ -48,6 +48,8 @@ devbox shell
 just init-all
 ```
 
+Download [Ubuntu Cloud Image](https://cloud-images.ubuntu.com/releases/) ISO and place it at [build/linux/ubuntu/isos](build/linux/ubuntu/isos) and/or [Rocky Generic Cloud Base Image](https://dl.rockylinux.org/pub/rocky/9/images/x86_64/) (uses Rocky-9-GenericCloud-Base.latest.x86_64.qcow2 format) and place it at [build/linux/rocky/isos](build/linux/rocky/isos) Note the checksums for any you plan to use, which will be needed in the steps below.
+
 ## Quick Start: Build something with `just`
 
 ```bash
@@ -64,14 +66,14 @@ just build-ubuntu-aws
 # Rocky AWS AMI
 just build-rocky-aws
 
-# Ubuntu GCP image
+# Ubuntu GCP image (failing for now)
 just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 
 ```
 
 ## Secrets & config
 
-Copy `.env.example` to `.env` and fill in values. These are read by Packer:
+Copy `.env.example` to `.env` and fill in values. Get these from the [Prancible](https://github.com/pulibrary/princeton_ansible) Vault. The will be read by Packer:
 
 - `BIGFIX_MASTHEAD_URL`
 - `RAPID7_TOKEN`
