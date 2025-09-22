@@ -1,0 +1,50 @@
+---
+# Ensure UFW installed & enabled first
+- name: Install ufw (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when: ansible_os_family == "Debian"
+
+# Default policies (must include 'policy')
+- name: Ensure UFW default incoming policy (deny)
+  community.general.ufw:
+    policy: deny
+    direction: incoming
+  when: ansible_os_family == "Debian"
+
+- name: Ensure UFW default outgoing policy (allow)
+  community.general.ufw:
+    policy: allow
+    direction: outgoing
+  when: ansible_os_family == "Debian"
+
+# Mandatory SSH allows (your CIDRs)
+- name: Allow SSH from approved CIDRs (UFW)
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "22"
+    src: "{{ item }}"
+  loop:
+    - 10.249.64.0/18
+    - 10.249.0.0/18
+    - 128.112.0.0/16
+    - 172.20.80.0/22
+    - 172.20.95.0/24
+    - 172.20.192.0/19
+  when: ansible_os_family == "Debian"
+
+# Mandatory BigFix port
+- name: Allow BigFix TCP/52311 (UFW)
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "52311"
+  when: ansible_os_family == "Debian"

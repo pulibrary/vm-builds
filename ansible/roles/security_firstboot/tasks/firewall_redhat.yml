@@ -1,0 +1,38 @@
+---
+- name: Ensure firewalld is installed
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+
+- name: Ensure firewalld is enabled and running
+  ansible.builtin.service:
+    name: firewalld
+    enabled: true
+    state: started
+
+# By default, many images have the generic 'ssh' service open to all.
+# We remove it and replace with scoped rich rules to your CIDRs.
+- name: Ensure generic SSH service is NOT broadly open
+  ansible.posix.firewalld:
+    service: ssh
+    state: disabled
+    zone: "{{ firewalld_zone }}"
+    permanent: true
+    immediate: true
+
+- name: Allow SSH from approved CIDRs via rich rules
+  ansible.posix.firewalld:
+    zone: "{{ firewalld_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+    rich_rule: 'rule family="ipv4" source address="{{ item }}" port protocol="tcp" port="22" accept'
+  loop: "{{ ssh_allowed_cidrs }}"
+
+- name: Allow BigFix 52311/tcp when requested
+  ansible.posix.firewalld:
+    port: 52311/tcp
+    zone: "{{ firewalld_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled

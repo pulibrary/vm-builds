@@ -106,3 +106,17 @@
     - systemd-daemon-reload
     - enable-firstboot-services
   tags: ["firstboot"]
+
+- name: Configure firewall & fail2ban (Debian/Ubuntu)
+  ansible.builtin.include_tasks: firewall_ubuntu.yml
+  when: ansible_os_family == "Debian"
+  tags: ['firewall','ssh','security']
+
+- name: Configure firewall & fail2ban (RHEL/Rocky)
+  ansible.builtin.include_tasks: firewall_redhat.yml
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall','ssh','security']
+
+- name: Configure Fail2ban
+  ansible.builtin.include_tasks: fail2ban.yml
+  tags: ['fail2ban', 'security']

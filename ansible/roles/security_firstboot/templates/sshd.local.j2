@@ -1,0 +1,21 @@
+[sshd]
+enabled = true
+port    = ssh
+filter  = sshd
+backend = {{ fail2ban_backend }}
+# Using systemd backend; no explicit logpath needed.
+# If you ever need it:
+# logpath = %(sshd_log)s
+
+# Pick action based on platform firewall:
+{% if ansible_os_family == 'Debian' %}
+# UFW (Ubuntu/Debian)
+action  = ufw
+{% elif ansible_os_family == 'RedHat' %}
+# firewalld (RHEL/Rocky)
+action  = firewallcmd-ipset
+{% else %}
+# Fallback to nftables drop (still works if the others fail)
+action  = nftables-multiport
+{% endif %}
+

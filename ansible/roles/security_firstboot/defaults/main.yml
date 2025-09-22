@@ -23,3 +23,36 @@ rapid7_rpm_pubkey: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.ra
 falcon_sensor_deb_url: ""     # can we try a temporary pre-signed/package URL for Debian/Ubuntu
 falcon_sensor_rpm_url: ""     # can we try a temporary pre-signed/package URL for RHEL/Rocky
 falcon_api_base: "https://api.crowdstrike.com"
+
+ssh_allowed_cidrs:
+  - 10.249.64.0/18
+  - 10.249.0.0/18
+  - 128.112.0.0/16
+  - 172.20.80.0/22
+  - 172.20.95.0/24
+  - 172.20.192.0/19
+
+# Enable fail2ban (install + enable service)
+fail2ban_backend: systemd
+fail2ban_bantime: 1h        # how long to ban
+fail2ban_findtime: 10m      # window to count failures
+fail2ban_maxretry: 5        # attempts before ban
+
+# Never ban these ranges (SSH-allowed CIDRs)
+fail2ban_ignoreips:
+  - 127.0.0.1/8
+  - ::1
+  - 10.249.64.0/18
+  - 10.249.0.0/18
+  - 128.112.0.0/16
+  - 172.20.80.0/22
+  - 172.20.95.0/24
+  - 172.20.192.0/19
+
+# UFW defaults (Ubuntu/Debian)
+ufw_default_incoming: deny
+ufw_default_outgoing: allow
+ufw_enable_now: true
+
+# Firewalld defaults (Rocky/RHEL)
+firewalld_zone: public
