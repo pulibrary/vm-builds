@@ -25,7 +25,17 @@
     direction: outgoing
   when: ansible_os_family == "Debian"
 
-# Mandatory SSH allows (your CIDRs)
+- name: Allow SSH from approved CIDRs (incl. 10.0.2.0/24 for local testing)
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    from_ip: "{{ item }}"
+  loop: "{{ allowed_admin_cidrs }}"
+  when: ansible_os_family == "Debian"
+  tags: ['firewall']
+
+# Mandatory SSH allows (our CIDRs)
 - name: Allow SSH from approved CIDRs (UFW)
   community.general.ufw:
     rule: allow

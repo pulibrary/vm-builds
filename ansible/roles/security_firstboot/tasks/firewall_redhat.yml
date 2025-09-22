@@ -10,24 +10,28 @@
     enabled: true
     state: started
 
-# By default, many images have the generic 'ssh' service open to all.
-# We remove it and replace with scoped rich rules to your CIDRs.
-- name: Ensure generic SSH service is NOT broadly open
+
+# Restrict SSH to allowed sources via rich rules (remove generic open service if present)
+- name: Disable generic SSH service (we’ll add source-restricted rules)
   ansible.posix.firewalld:
     service: ssh
-    state: disabled
-    zone: "{{ firewalld_zone }}"
+    zone: public
     permanent: true
     immediate: true
+    state: disabled
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall']
 
-- name: Allow SSH from approved CIDRs via rich rules
+- name: Allow SSH from allowed_admin_cidrs
   ansible.posix.firewalld:
-    zone: "{{ firewalld_zone }}"
+    rich_rule: 'rule family="ipv4" source address="{{ item }}" port protocol="tcp" port="22" accept'
+    zone: public
     permanent: true
     immediate: true
     state: enabled
-    rich_rule: 'rule family="ipv4" source address="{{ item }}" port protocol="tcp" port="22" accept'
-  loop: "{{ ssh_allowed_cidrs }}"
+  loop: "{{ allowed_admin_cidrs }}"
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall']
 
 - name: Allow BigFix 52311/tcp when requested
   ansible.posix.firewalld:

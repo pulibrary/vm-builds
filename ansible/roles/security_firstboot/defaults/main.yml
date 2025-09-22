@@ -24,6 +24,16 @@ falcon_sensor_deb_url: ""     # can we try a temporary pre-signed/package URL fo
 falcon_sensor_rpm_url: ""     # can we try a temporary pre-signed/package URL for RHEL/Rocky
 falcon_api_base: "https://api.crowdstrike.com"
 
+allowed_admin_cidrs:
+  - 10.249.64.0/18
+  - 10.249.0.0/18
+  - 128.112.0.0/16
+  - 172.20.80.0/22
+  - 172.20.95.0/24
+  - 172.20.192.0/19
+  # REQUIRED FOR LOCAL/QEMU USER-NET (host->guest port forward shows as 10.0.2.2)
+  - 10.0.2.0/24
+
 ssh_allowed_cidrs:
   - 10.249.64.0/18
   - 10.249.0.0/18
@@ -31,6 +41,8 @@ ssh_allowed_cidrs:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  # REQUIRED FOR LOCAL/QEMU USER-NET (host->guest port forward shows as 10.0.2.2)
+  - 10.0.2.0/24
 
 # Enable fail2ban (install + enable service)
 fail2ban_backend: systemd
@@ -48,6 +60,8 @@ fail2ban_ignoreips:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  #  REQUIRED FOR LOCAL/QEMU USER-NET
+  - 10.0.2.0/24
 
 # UFW defaults (Ubuntu/Debian)
 ufw_default_incoming: deny
@@ -56,3 +70,6 @@ ufw_enable_now: true
 
 # Firewalld defaults (Rocky/RHEL)
 firewalld_zone: public
+
+security_local_test: false
+
