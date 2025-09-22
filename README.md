@@ -210,10 +210,12 @@ Protected users (`root`, `pulsys`) are never removed.
 ```bash
 # Boot the image
 qemu-system-x86_64 \
-  -m 2048 \
-  -drive file=artifacts/qemu/linux-ubuntu-*/linux-ubuntu-*.qcow2,format=qcow2 \
-  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-  -device e1000,netdev=net0
+    -m 2048 -smp 2 \
+    -accel tcg,thread=multi \
+    -drive file="artifacts/qemu/linux-ubuntu-22-04-lts-20250922-062113/linux-ubuntu-22-04-lts-20250922-062113.qcow2",if=virtio,format=qcow2,cache=writeback \
+    -netdev user,id=n1,hostfwd=tcp::2222-:22 \
+    -device virtio-net-pci,netdev=n1 \
+    -serial mon:stdio -display
 
 # SSH into the VM (in another terminal)
 ssh -p 2222 pulsys@localhost
