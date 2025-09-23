@@ -1,0 +1,20 @@
+{{ ansible_managed | comment }}
+
+## Tower key goes on all machines
+# Key for our Tower instance
+{{ pulsys_tower_key | trim }}
+
+## ops staff keys go on all machines
+# Keys for Operations Staff
+{% for url in ops_github_keys | default([]) %}
+# Keys for {{ (url | regex_replace('^.*github\\.com/([^/]+)\\.keys$', '\\1')) }}
+{{ lookup('ansible.builtin.url', url, split_lines=False) | trim }}
+{% endfor %}
+
+## library staff keys go on all machines
+# Keys for Library Staff
+{% for url in library_github_keys | default([]) %}
+# Keys for {{ (url | regex_replace('^.*github\\.com/([^/]+)\\.keys$', '\\1')) }}
+{{ lookup('ansible.builtin.url', url, split_lines=False) | trim }}
+{% endfor %}
+

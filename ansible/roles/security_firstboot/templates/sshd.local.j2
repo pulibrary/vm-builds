@@ -1,0 +1,25 @@
+[DEFAULT]
+bantime  = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+backend  = systemd
+
+# Never ban these
+ignoreip = 127.0.0.1/8 ::1 {% for cidr in allowed_admin_cidrs %} {{ cidr }}{% endfor %}
+
+# Use distro-appropriate firewall
+{% if ansible_os_family == 'Debian' %}
+banaction = ufw
+{% else %}
+banaction = firewallcmd-rich-rules
+{% endif %}
+
+[sshd]
+enabled = true
+port    = ssh
+{% if ansible_os_family == 'Debian' -%}
+logpath = /var/log/auth.log
+{% else -%}
+logpath = /var/log/secure
+{% endif -%}
+

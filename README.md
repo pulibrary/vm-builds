@@ -1,140 +1,287 @@
-# VM-Builds
+# VM Builds
 
-Packer templates for creating server images with:
-- Packer
-- QEMU (for local VM images)
-- AWS (for AMI creation)
-- GCP (for GCE image creation)
-- Autoinstall (cloud-init)
+Infrastructure-as-Code repository for building standardized virtual machine images using Packer and Ansible.
 
-## Requirements
+## Overview
 
-- [Packer](https://www.packer.io/) (v1.8.0+)
-- [QEMU](https://www.qemu.org/) (for local VM building)
-- [AWS CLI](https://aws.amazon.com/cli/) (configured with proper credentials for AWS AMI building)
-- [Google Cloud SDK](https://cloud.google.com/sdk) (configured with proper credentials for GCP image building)
-- [Cloud-Init](https://cloud-init.io/) (for validation, optional)
+This repository contains Packer templates and Ansible playbooks for creating consistent, secure golden images for Princeton University Library infrastructure. Currently supports Ubuntu 22.04 LTS and Rocky Linux 9.4.
 
-## Supported Images
+## Prerequisites
 
-| Distribution | Version | Build Types |
-|:-------------|:-------:|:------------|
-| **Ubuntu Jammy Jellyfish** | `22.04.4` | QEMU, AWS, GCP |
+### Using Devbox (Recommended)
 
-
-## Usage
-
-This project uses GNU-Make to streamline building and validation.
-
-### Validation
-
-#### Validate All Templates
 ```bash
-make validate
-````
-
-#### Validate Cloud-Init Configuration
-
-```
-bash
-# Validate all cloud-init configurations
-make validate-cloudinit
-
-# Validate specific distro (currently only jammy)
-make validate-cloudinit-jammy
+# Install Devbox from https://www.jetbox.io/devbox
+# Then simply run:
+devbox shell
 ```
 
-#### Validate Packer Templates
+This will automatically install all required tools:
+- Packer
+- Ansible
+- Python
+- AWS CLI v2
+- Google Cloud SDK
+- QEMU
+- Git
+- Just
 
-```
-bash
-# Validate all packer templates
-make validate-packer
+### Manual Installation
 
-# Validate only QEMU template
-make validate-jammy
+If not using Devbox, (you know what you're doing :wink:) manually install:
+- Packer >= 1.12.0
+- Ansible >= 2.9
+- Python >= 3.8
+- QEMU (for local testing)
 
-# Validate only AWS template
-make validate-aws-jammy
+## Quick Start
 
-# Validate only GCP template
-make validate-gcp-jammy
-```
+```bash
+# Clone the repository
+git clone https://github.com/pulibrary/vm-builds.git
+cd vm-builds
 
-### Building Images
+# Enter the Devbox environment
+devbox shell
 
-#### QEMU Images (Local VMs)
-
-```
-bash
-# Build Ubuntu 22.04 (Jammy) QEMU image
-make build-jammy
-```
-
-#### AWS AMIs
-
-```
-bash
-# Build Ubuntu 22.04 (Jammy) AWS AMI
-make build-aws-jammy
+# (One-time) Initialize packer plugins for all templates
+just init-all
 ```
 
-#### GCP Images
+Download [Ubuntu Cloud Image](https://cloud-images.ubuntu.com/releases/) ISO and place it at [build/linux/ubuntu/isos](build/linux/ubuntu/isos) and/or [Rocky Generic Cloud Base Image](https://dl.rockylinux.org/pub/rocky/9/images/x86_64/) (uses Rocky-9-GenericCloud-Base.latest.x86_64.qcow2 format) and place it at [build/linux/rocky/isos](build/linux/rocky/isos) Note the checksums for any you plan to use, which will be needed in the steps below.
+
+## Quick Start: Build something with `just`
+
+```bash
+# Ubuntu QEMU (requires the cloud-image checksum)
+# Exmaple checksum shown; replace with the current release checksum
+just build-ubuntu-qemu 'sha256:b119a978dcb66194761674c23a860a75cdb7778e95e222b51d7a3386dfe3c920' true
+
+# Rocky QEMU (also requires checksum)
+just build-rocky-qemu 'sha256:<rocky_cloud_image_sha256_here>'
+
+# Ubuntu AWS AMI
+just build-ubuntu-aws
+
+# Rocky AWS AMI
+just build-rocky-aws
+
+# Ubuntu GCP image (failing for now)
+just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 
 ```
-bash
-# Build Ubuntu 22.04 (Jammy) GCP image
-make build-gcp-jammy
+
+## Secrets & config
+
+Copy `.env.example` to `.env` and fill in values. Get these from the [Prancible](https://github.com/pulibrary/princeton_ansible) Vault. The will be read by Packer:
+
+- `BIGFIX_MASTHEAD_URL`
+- `RAPID7_TOKEN`
+- `RAPID7_ATTRIBUTES`
+- `FALCON_CID`
+
+### Build
+```bash
+set -a; source .env; set +a
+just build-ubuntu-aws
+# or
+just build-rocky-qemu 'sha256:<rocky sha256>' true
 ```
 
-## Cloud Provider Configuration
+## Project Structure
 
-### AWS AMI Building
+```
+.
+├── ansible/                   # Ansible provisioning
+│   ├── roles/
+│   │   ├── base/            # OS updates and packages
+│   │   ├── users/           # User and SSH key management
+│   │   ├── configure/       # System configuration
+│   │   └── clean/           # Image cleanup
+│   └── linux-playbook.yml   # Main playbook
+├── artifacts/                # Build outputs (git-ignored)
+├── builds/
+│   └── linux/
+│       ├── rocky/           # Rocky Linux configs
+│       └── ubuntu/          # Ubuntu configs
+├── manifests/               # Build metadata
+└── devbox.json             # Development environment
+```
 
-Before building AWS AMIs, ensure:
+## Supported Builds
 
-1. You have AWS CLI installed and configured with proper credentials
+| OS | Version | Platform | Status |
+|---|---------|----------|---------|
+| Ubuntu | 22.04 LTS | QEMU | Working |
+| Ubuntu | 22.04 LTS | GCP | Template exists |
+| Ubuntu | 22.04 LTS | AWS | Working |
+| Rocky Linux | 9.4 | QEMU | Working |
+| Rocky Linux | 9.4 | AWS | Working |
 
-2. The AWS CLI profile has permissions to:
+## Building Images
 
-   * Create and modify EC2 instances
-   * Create AMIs
-   * Create and modify security groups
-   * Create and delete key pairs
+### Build Images (Local Testing)
 
-You can customize the AWS build by editing `vars/aws-jammy.pkrvars.hcl` to change:
+```bash
+# Ubuntu QEMU build
+packer build builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl
 
-* AWS region
-* Instance type
-* AMI name prefix
-* Other AWS-specific settings
+# Rocky Linux QEMU build
+packer build builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl
+```
 
-### GCP Image Building
+### GCP Build
 
-Before building GCP images, ensure:
+```bash
+# Requires: gcloud auth application-default login
+packer build -var "gcp_project_id=pul-gcdc" \
+  builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl
+```
 
-1. You have Google Cloud SDK installed and configured with proper credentials
+### Build Outputs
 
-2. Your GCP account has permissions to:
+- QEMU builds: `artifacts/qemu/[os-version]/`
+  - `.qcow2` - QEMU image
+  - `.vmdk` - VMware disk
+  - `.vhd` - Hyper-V disk
+  - `.ovf` - Open Virtualization Format
 
-   * Create and delete compute instances
-   * Create disk images
-   * Create and modify firewall rules
+## Ansible Roles
 
-You must customize the GCP build by editing `vars/gcp-jammy.pkrvars.hcl` to set:
+### base
+- Updates all packages to latest
+- Installs essential packages
+- Configures cloud-init (when enabled)
 
-* Your GCP project ID
-* Zone preference
-* Machine type
-* Other GCP-specific settings
+### users
+- Creates `pulsys` user with sudo access
+- Pulls SSH keys from GitHub for:
+  - Operations staff
+  - Library development staff
+  - Ansible Tower Keys
+- Manages build users (`packer`, `ubuntu`)
 
+### configure
+- Enables SSH public key authentication
+- Sets hostname to `lib-vm`
+- Configures cloud-init datasources
+- Regenerates SSH host keys on first boot
+
+### clean
+- Removes temporary files and logs
+- Cleans build artifacts
+- Optionally removes build users
+- Clears machine-id for uniqueness
+
+## User Management
+
+### pulsys Administrative User
+
+The `pulsys` user is automatically created with SSH keys from:
+
+```yaml
+# ansible/roles/users/defaults/main.yml
+ops_github_keys:
+  - https://github.com/acozine.keys
+  - https://github.com/kayiwa.keys
+  # ... additional ops staff
+
+library_github_keys:
+  - https://github.com/escowles.keys
+  - https://github.com/hackartisan.keys
+  # ... additional library staff
+```
+
+To add/remove users, update the lists in `ansible/roles/users/defaults/main.yml`.
+
+### Build Cleanup
+
+Set `cleanup_final_image=true` to remove build users from the final image:
+```bash
+packer build -var "cleanup_final_image=true" [template]
+```
+
+Protected users (`root`, `pulsys`) are never removed.
+
+## Testing Images
+
+### Local QEMU Testing
+
+```bash
+# Boot the image
+qemu-system-x86_64 \
+    -m 2048 -smp 2 \
+    -accel tcg,thread=multi \
+    -drive file="artifacts/qemu/linux-ubuntu-22-04-lts-20250922-062113/linux-ubuntu-22-04-lts-20250922-062113.qcow2",if=virtio,format=qcow2,cache=writeback \
+    -netdev user,id=n1,hostfwd=tcp::2222-:22 \
+    -device virtio-net-pci,netdev=n1 \
+    -serial mon:stdio -display
+
+# SSH into the VM (in another terminal)
+ssh -p 2222 pulsys@localhost
+```
+
+## Configuration Variables
+
+Common Packer variables:
+
+```hcl
+# User settings
+build_username = "packer"
+ansible_username = "packer"
+build_key = "ssh-rsa ..."     # SSH key for build user
+ansible_key = "ssh-rsa ..."   # SSH key for ansible user
+
+# Image settings
+disk_size = 30                # GB
+vm_guest_os_cloudinit = true  # Enable cloud-init
+
+# Cleanup
+cleanup_final_image = true    # Remove build artifacts
+```
 
 ## Troubleshooting
 
-### Common Issues
+### ISO Checksum Error
+**Problem**: `invalid checksum: encoding/hex: invalid byte`
+**Solution**: Download the ISO and update the checksum in the `.pkr.hcl` file
 
-1. **Missing cloud-init command**: The validation will skip cloud-init validation if the command is not available
-2. **AWS credential issues**: Ensure your AWS credentials are properly configured with `aws configure`
-3. **GCP credential issues**: Ensure you're authenticated with `gcloud auth login` and have set your project with `gcloud config set project YOUR_PROJECT_ID`
-4. **QEMU errors**: Check that OVMF firmware files are installed on your system
-5. **Permission issues**: For cloud providers, check that your account has the necessary permissions to create instances and images
+### SSH Timeout During Build
+**Problem**: Packer can't connect to the VM
+**Solution**: Check QEMU is working and increase `ssh_timeout`
+
+### Missing Dependencies
+**Problem**: Command not found errors
+**Solution**: Use `devbox shell` or install missing tools manually
+
+### Build Users Remain in Image
+**Problem**: `ubuntu` or `packer` users still present
+**Solution**: Set `-var "cleanup_final_image=true"` during build
+
+## Build Manifests
+
+Each build generates a manifest in `manifests/` containing:
+- Build timestamp
+- Git commit hash
+- Image metadata
+- Custom variables used
+
+Example: `manifests/2025-09-19 19:17:41.json`
+
+## Contributing
+
+1. Create a feature branch
+2. Test changes locally with QEMU
+3. Validate Packer templates: `packer validate [template]`
+4. Submit pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+**Maintained by**: Princeton University Library
+**Repository**: https://github.com/pulibrary/vm-builds

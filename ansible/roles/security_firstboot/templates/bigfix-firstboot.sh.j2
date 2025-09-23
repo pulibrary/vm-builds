@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+set -euo pipefail
+
+STATE_DIR="/var/lib/security-firstboot"
+MARKER="${STATE_DIR}/bigfix.done"
+
+INSTALL_ROOT="/opt/BESClient"         # requested location
+LEGACY_ETC_DIR="/etc/opt/BESClient"   # BigFix default lookup path
+
+# Env provided by systemd EnvironmentFile (/etc/pul/security-tools.env)
+: "${BIGFIX_MASTHEAD_URL:=}"
+
+if [[ -f "$MARKER" ]]; then
+  exit 0
+fi
+
+mkdir -p "$STATE_DIR"
+mkdir -p "$INSTALL_ROOT"
+chmod 0755 "$INSTALL_ROOT"
+
+# Make sure the legacy path points to /opt
+mkdir -p "$(dirname "$LEGACY_ETC_DIR")"
+if [[ ! -L "$LEGACY_ETC_DIR" ]]; then
+  # If a real dir exists already, move it aside then link
+  if [[ -d "$LEGACY_ETC_DIR" ]]; then
+    mv "$LEGACY_ETC_DIR" "${LEGACY_ETC_DIR}.bak.$(date +%s)"
+  fi
+  ln -sfn "$INSTALL_ROOT" "$LEGACY_ETC_DIR"
+fi
+
+# Fetch masthead into /opt
+if [[ -n "${BIGFIX_MASTHEAD_B64:-}" ]]; then
+  echo "$BIGFIX_MASTHEAD_B64" | base64 -d > "$INSTALL_ROOT/actionsite.afxm"
+  chmod 0600 "$INSTALL_ROOT/actionsite.afxm"
+elif [[ -n "$BIGFIX_MASTHEAD_URL" ]]; then
+  curl -fsSL --max-time 75 "$BIGFIX_MASTHEAD_URL" -o "$INSTALL_ROOT/actionsite.afxm" || {
+    echo "BigFix: cannot fetch masthead; skipping."
+    exit 0
+  }
+  chmod 0600 "$INSTALL_ROOT/actionsite.afxm"
+else
+  echo "BigFix: no masthead provided; skipping."
+  exit 0
+fi
+
+# Install agent package (Debian/Ubuntu vs RHEL/Rocky)
+if command -v dpkg >/dev/null 2>&1; then
+  echo "BigFix: installing DEB…"
+  curl -fsSL "{{ bigfix_deb_url }}" -o /tmp/BESAgent.deb
+  apt-get update -y || true
+  apt-get -y install /tmp/BESAgent.deb
+else
+  echo "BigFix: installing RPM…"
+  curl -fsSL "{{ bigfix_gpg_key_url }}" | rpm --import -
+  curl -fsSL "{{ bigfix_rpm_url }}" -o /tmp/BESAgent.rpm
+  dnf -y install /tmp/BESAgent.rpm || yum -y install /tmp/BESAgent.rpm
+fi
+
+# Start & enable the service (name varies between distros)
+systemctl enable besclient.service 2>/dev/null || true
+systemctl enable besclient          2>/dev/null || true
+systemctl restart besclient.service 2>/dev/null || systemctl restart besclient || true
+
+touch "$MARKER"
+exit 0
+

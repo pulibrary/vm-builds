@@ -1,0 +1,42 @@
+---
+- name: Ensure firewalld is installed
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+
+- name: Ensure firewalld is enabled and running
+  ansible.builtin.service:
+    name: firewalld
+    enabled: true
+    state: started
+
+
+# Restrict SSH to allowed sources via rich rules (remove generic open service if present)
+- name: Disable generic SSH service (we’ll add source-restricted rules)
+  ansible.posix.firewalld:
+    service: ssh
+    zone: public
+    permanent: true
+    immediate: true
+    state: disabled
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall']
+
+- name: Allow SSH from allowed_admin_cidrs
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item }}" port protocol="tcp" port="22" accept'
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ allowed_admin_cidrs }}"
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall']
+
+- name: Allow BigFix 52311/tcp when requested
+  ansible.posix.firewalld:
+    port: 52311/tcp
+    zone: "{{ firewalld_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled

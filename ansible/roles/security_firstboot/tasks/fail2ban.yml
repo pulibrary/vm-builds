@@ -1,0 +1,68 @@
+---
+# Install Fail2Ban
+- name: Install fail2ban (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Ensure dnf plugins are present (RHEL/Rocky)
+  ansible.builtin.yum:
+    name: dnf-plugins-core
+    state: present
+  when: ansible_os_family == "RedHat"
+
+# Rocky uses CRB; plain RHEL uses codeready-builder (leave rocky here)
+- name: Enable CRB repo (Rocky)
+  ansible.builtin.command: dnf config-manager --set-enabled crb
+  args:
+    creates: /etc/yum.repos.d/rocky-extras.repo
+  changed_when: false
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution | lower == "rocky"
+
+- name: Install EPEL (RHEL/Rocky)
+  ansible.builtin.yum:
+    name: epel-release
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install fail2ban (RHEL/Rocky)
+  ansible.builtin.dnf:
+    name: fail2ban
+    state: present
+  when: ansible_os_family == "RedHat"
+
+# Baseline defaults
+- name: Write /etc/fail2ban/jail.local (baseline defaults)
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [DEFAULT]
+      backend = {{ fail2ban_backend }}
+      bantime = {{ fail2ban_bantime }}
+      findtime = {{ fail2ban_findtime }}
+      maxretry = {{ fail2ban_maxretry }}
+      ignoreip = {{ fail2ban_ignoreips | join(' ') }}
+
+# SSH jail (action depends on platform firewall)
+- name: Write SSH jail override
+  ansible.builtin.template:
+    src: sshd.local.j2
+    dest: /etc/fail2ban/jail.d/sshd.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart fail2ban
+
+# Enable + start
+- name: Ensure fail2ban is enabled and started
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started

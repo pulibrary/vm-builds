@@ -1,0 +1,93 @@
+---
+# Linux distribution specific tasks.
+
+# Tasks for creating the local group for Ansible.
+- name: Creating the local group for Ansible.
+  ansible.builtin.group:
+    name: "{{ ansible_username }}"
+
+# Tasks for creating the sudo group.
+- name: Creating the sudo group.
+  ansible.builtin.group:
+    name: sudo
+
+# Tasks for creating the local user for Ansible.
+- name: Creating the local user for Ansible.
+  ansible.builtin.user:
+    name: "{{ ansible_username }}"
+    group: "{{ ansible_username }}"
+    groups: sudo
+    password: "!"
+    shell: /bin/bash
+
+# Tasks for managing the authorized keys for the local users.
+- name: Managing the authorized keys for the local users.
+  ansible.posix.authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ item.key }}"
+  loop:
+    - user: "{{ ansible_username }}"
+      key: "{{ ansible_key }}"
+    - user: "{{ build_username }}"
+      key: "{{ build_key }}"
+  no_log: true
+
+# Tasks for managing sudoers.d for the local users.
+- name: Managing sudoers.d for the local users.
+  community.general.sudoers:
+    name: "{{ item }}"
+    user: "{{ item }}"
+    commands: ALL
+  loop:
+    - "{{ build_username }}"
+    - "{{ ansible_username }}"
+
+- name: Ensure sudo group exists
+  ansible.builtin.group:
+    name: sudo
+  tags: ['pulsys']
+
+- name: Create group for pulsys
+  ansible.builtin.group:
+    name: pulsys
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Create pulsys user
+  ansible.builtin.user:
+    name: pulsys
+    group: pulsys
+    groups: sudo
+    shell: /bin/bash
+    password: "!"
+    create_home: true
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Ensure ~pulsys/.ssh exists
+  ansible.builtin.file:
+    path: /home/pulsys/.ssh
+    state: directory
+    owner: pulsys
+    group: pulsys
+    mode: '0700'
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Install pulsys authorized_keys from dynamic GitHub lists
+  ansible.builtin.template:
+    src: pulsys_authorized_keys.j2
+    dest: /home/pulsys/.ssh/authorized_keys
+    owner: pulsys
+    group: pulsys
+    mode: '0600'
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Add pulsys to sudoers.d
+  community.general.sudoers:
+    name: pulsys
+    user: pulsys
+    commands: ALL
+  when: pulsys_enabled
+  tags: ['pulsys']

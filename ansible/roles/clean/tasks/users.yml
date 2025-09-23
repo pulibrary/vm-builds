@@ -1,0 +1,57 @@
+---
+# Compute final removal set:
+#   ([build_username, ansible_username] + known_defaults + extra) - keepers
+- name: Compute users_to_remove
+  ansible.builtin.set_fact:
+    _candidate_users: >-
+      {{ ([build_username|default(None), ansible_username|default(None)] 
+           + users_remove_known_defaults + users_remove_extra) 
+         | reject('equalto', None) 
+         | reject('equalto', '') 
+         | list 
+         | unique }}
+    _keepers: >-
+      {{ (users_keep_always + [ansible_user|default(None)]) 
+         | reject('equalto', None) 
+         | reject('equalto', '') 
+         | list 
+         | unique }}
+- name: Filter removal list against keepers
+  ansible.builtin.set_fact:
+    users_to_remove: "{{ _candidate_users | difference(_keepers) }}"
+
+# Lookup existing passwd entries so we only act on real accounts
+- name: Gather passwd database
+  ansible.builtin.getent:
+    database: passwd
+  register: ge
+  failed_when: false
+
+# Remove sudoers.d files for those users if present
+- name: Remove sudoers.d stanzas for candidate users
+  community.general.sudoers:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ users_to_remove }}"
+  when: item in (ge.ansible_facts.getent_passwd | default({})).keys()
+  ignore_errors: true
+
+# Remove their authorized_keys (defense in depth; userdel -r also handles it)
+- name: Remove authorized_keys for candidate users (if any)
+  ansible.builtin.file:
+    path: "/home/{{ item }}/.ssh/authorized_keys"
+    state: absent
+  loop: "{{ users_to_remove }}"
+  when: item in (ge.ansible_facts.getent_passwd | default({})).keys()
+  ignore_errors: true
+
+# Finally remove the accounts (+home), even if they still own processes
+- name: Remove builder/cloud-init users (home & processes)
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: true
+    force: true
+  loop: "{{ users_to_remove }}"
+  when: item in (ge.ansible_facts.getent_passwd | default({})).keys()
+  tags: ['cleanup']
