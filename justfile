@@ -6,6 +6,7 @@ set shell := ["bash", "-c"]
 # ─── Paths (match repo) ────────────────────────────────────────────────
 
 ubuntu_qemu_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl"
+ubuntu_qemu_desktop_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-desktop-cloudimg.pkr.hcl"
 ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
 rocky_qemu_tpl := "builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl"
@@ -20,6 +21,9 @@ rocky_cloudinit_user_data := "builds/linux/rocky/data/user-data.pkrtpl.hcl"
 init-ubuntu-qemu:
     packer init {{ ubuntu_qemu_tpl }}
 
+init-ubuntu-qemu-desktop:
+    packer init {{ ubuntu_qemu_desktop_tpl }}
+
 init-ubuntu-aws:
     packer init {{ ubuntu_aws_tpl }}
 
@@ -32,7 +36,7 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-ubuntu-qemu init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
+init-all: init-ubuntu-qemu init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
     @echo "PACKER: All templates initialized."
 
 # ─── Validate (syntax + required vars checks) ───────────────────────────────
@@ -42,6 +46,11 @@ validate-ubuntu-qemu iso_checksum: init-ubuntu-qemu
     @echo "PACKER: Validating Ubuntu QEMU template"
     [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Ubuntu (e.g. sha256:...)" >&2; exit 1)
     packer validate -var "iso_checksum={{ iso_checksum }}" {{ ubuntu_qemu_tpl }}
+
+validate-ubuntu-qemu-desktop iso_checksum: init-ubuntu-qemu-desktop
+    @echo "PACKER: Validating Ubuntu QEMU DESKTOP template"
+    [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Ubuntu Desktop (e.g. sha256:...)" >&2; exit 1)
+    packer validate -var "iso_checksum={{ iso_checksum }}" {{ ubuntu_qemu_desktop_tpl }}
 
 validate-ubuntu-aws: init-ubuntu-aws
     @echo "PACKER: Validating Ubuntu AWS template"
@@ -92,6 +101,13 @@ build-ubuntu-qemu iso_checksum export_ovf='false' debug='false' VARS='':
     [[ "{{ debug }}" == "true" ]] \
       && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }}
+
+build-ubuntu-qemu-desktop iso_checksum export_ovf='false' debug='false' VARS='':
+    just validate-ubuntu-qemu-desktop {{ iso_checksum }}
+    @echo "PACKER: Building Ubuntu QEMU (DESKTOP) (export_ovf={{ export_ovf }}, debug={{ debug }})"
+    [[ "{{ debug }}" == "true" ]] \
+      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }}
 
 build-rocky-qemu iso_checksum export_ovf='false' debug='false' VARS='':
     just validate-rocky-qemu {{ iso_checksum }}
