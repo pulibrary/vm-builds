@@ -3,6 +3,7 @@
 users:
   - name: ${build_username}
     gecos: Packer Build User
+    uid: 1010
     groups: [adm, sudo]
     shell: /bin/bash
     sudo: "ALL=(ALL) NOPASSWD:ALL"
@@ -32,6 +33,17 @@ write_files:
     permissions: "0644"
     content: |
       datasource_list: [ NoCloud, None ]
+  - path: /etc/cloud/cloud.cfg.d/90_packer_default_user.cfg
+    permissions: "0644"
+    content: |
+      system_info:
+        default_user:
+          name: ${build_username}
+          gecos: Packer Build User
+          groups: [adm, sudo]
+          shell: /bin/bash
+          sudo: "ALL=(ALL) NOPASSWD:ALL"
+          lock_passwd: false
   - path: /etc/pul/security-tools.env
     permissions: '0600'
     content: |
@@ -44,7 +56,7 @@ write_files:
       FALCON_CID=${FALCON_CID}
 runcmd:
   - systemctl enable --now ssh || systemctl enable --now sshd
-
+  - "id ubuntu >/dev/null 2>&1 && deluser --remove-home ubuntu || true"
 # Locales & timezone
 timezone: ${vm_guest_os_timezone}
 locale: ${vm_guest_os_language}

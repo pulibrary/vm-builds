@@ -8,6 +8,7 @@ ssh_pwauth: true
 users:
   - name: ${build_username}
     gecos: "Packer"
+    uid: 1010
     groups: [ wheel, adm, systemd-journal ]
     sudo: "ALL=(ALL) NOPASSWD:ALL"
     shell: /bin/bash

@@ -564,6 +564,15 @@ build {
     ]
   }
 
+  provisioner "shell" {
+    inline = [
+      "sudo userdel -r packer 2>/dev/null || true",
+      "sudo userdel -r ubuntu 2>/dev/null || true",
+    ]
+    execute_command = "echo '${var.build_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+  }
+
+
   post-processor "manifest" {
     output     = local.manifest_output
     strip_path = true
@@ -590,94 +599,173 @@ build {
     }
   }
 
-  // Convert QCOW2 → VMDK/VHD (avoid ${...} braces in Bash by using $VAR form)
+  // Convert QCOW2 → VMDK/VHD
   post-processor "shell-local" {
     inline = [<<-EOT
-    set -euo pipefail
-    D='${local.output_dir}'
-    B='${local.vm_name}'
+      set -euo pipefail
+      D='${local.output_dir}'
+      B='${local.vm_name}'
 
-    # Locate source disk from the builder
-    SRC="$(ls -1 "$D"/*.qcow2 2>/dev/null | head -n1 || true)"
-    if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/*.img 2>/dev/null | head -n1 || true)"; fi
-    if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/packer-* 2>/dev/null | head -n1 || true)"; fi
-    if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/*-linux-ubuntu-cloudimg 2>/dev/null | head -n1 || true)"; fi
-    if [ -z "$SRC" ]; then SRC="$(find "$D" -type f -size +100M -print0 | xargs -0 ls -1S 2>/dev/null | head -n1 || true)"; fi
-    if [ -z "$SRC" ]; then echo "Could not locate source disk image in $D" >&2; exit 1; fi
+      # Find the source image produced by the builder
+      SRC="$(ls -1 "$D"/*.qcow2 2>/dev/null | head -n1 || true)"
+      if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/*.img 2>/dev/null | head -n1 || true)"; fi
+      if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/packer-* 2>/dev/null | head -n1 || true)"; fi
+      if [ -z "$SRC" ]; then SRC="$(find "$D" -type f -size +100M -print0 | xargs -0 ls -1S 2>/dev/null | head -n1 || true)"; fi
+      if [ -z "$SRC" ]; then echo "Could not locate source disk image in $D" >&2; exit 1; fi
 
-    qemu-img info "$SRC" || true
+      qemu-img info "$SRC" || true
 
-    qemu-img convert -p -O qcow2 "$SRC" "$D/$B.qcow2"
-    qemu-img convert -p -O vmdk -o subformat=streamOptimized "$SRC" "$D/$B.vmdk"
-    qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
+      # Convert to target formats for publishing
+      qemu-img convert -p -O qcow2 "$SRC" "$D/$B.qcow2"
+      qemu-img convert -p -O vmdk -o subformat=streamOptimized "$SRC" "$D/$B.vmdk"
+      qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
 
-    # Optionally gzip the qcow2 to save space
-    if [ "${var.compress_qcow2}" = "true" ]; then
-      gzip -f -9 "$D/$B.qcow2"
-    fi
-
-    # Optional: emit a simple OVF set and optionally pack to OVA
-    if [ "${var.export_ovf}" = "true" ]; then
-      VMDK="$D/$B.vmdk"
-      OVF="$D/$B.ovf"
-      MF="$D/$B.mf"
-
-      # Pull virtual size in bytes
-      DISK_BYTES=$(qemu-img info "$VMDK" | awk '/virtual size/ {match($0, /\(([0-9]+) bytes\)/, a); print a[1]}')
-
-      cat > "$OVF" <<OVF
-<?xml version="1.0" encoding="UTF-8"?>
-<ovf:Envelope xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1" xmlns:vmw="http://www.vmware.com/schema/ovf" ovf:version="1.0">
-  <ovf:References>
-    <ovf:File ovf:id="file1" ovf:href="$B.vmdk" ovf:size="$DISK_BYTES"/>
-  </ovf:References>
-  <ovf:DiskSection>
-    <ovf:Info>Virtual disk information</ovf:Info>
-    <ovf:Disk ovf:diskId="vmdisk1" ovf:fileRef="file1" ovf:capacity="$DISK_BYTES" ovf:capacityAllocationUnits="byte"/>
-  </ovf:DiskSection>
-  <ovf:VirtualSystem ovf:id="$B">
-    <ovf:Info>Ubuntu ${var.vm_guest_os_version}</ovf:Info>
-    <ovf:VirtualHardwareSection>
-      <ovf:Item>
-        <ovf:ElementName>${var.vm_cpu_count} virtual CPU(s)</ovf:ElementName>
-        <ovf:InstanceID>1</ovf:InstanceID>
-        <ovf:ResourceType>3</ovf:ResourceType>
-        <ovf:VirtualQuantity>${var.vm_cpu_count}</ovf:VirtualQuantity>
-      </ovf:Item>
-      <ovf:Item>
-        <ovf:ElementName>${var.vm_mem_size}MB of memory</ovf:ElementName>
-        <ovf:InstanceID>2</ovf:InstanceID>
-        <ovf:ResourceType>4</ovf:ResourceType>
-        <ovf:VirtualQuantity>${var.vm_mem_size}</ovf:VirtualQuantity>
-        <ovf:AllocationUnits>byte * 2^20</ovf:AllocationUnits>
-      </ovf:Item>
-      <ovf:Item>
-        <ovf:ElementName>Hard disk</ovf:ElementName>
-        <ovf:InstanceID>3</ovf:InstanceID>
-        <ovf:ResourceType>17</ovf:ResourceType>
-        <ovf:HostResource>ovf:/disk/vmdisk1</ovf:HostResource>
-      </ovf:Item>
-    </ovf:VirtualHardwareSection>
-  </ovf:VirtualSystem>
-</ovf:Envelope>
-OVF
-
-      # Manifest (sha256)
-      if command -v shasum >/dev/null 2>&1; then
-        (cd "$D" && shasum -a 256 "$B.ovf" "$B.vmdk" | awk '{print "SHA256(" $2 ")= " $1 }' > "$MF")
-      else
-        (cd "$D" && sha256sum "$B.ovf" "$B.vmdk" | awk '{print "SHA256(" $2 ")= " $1 }' > "$MF")
+      # gzip qcow2 (after we've created it)
+      if [ "${var.compress_qcow2}" = "true" ]; then
+        gzip -f -9 "$D/$B.qcow2"
       fi
 
-      if [ "${var.pack_ova}" = "true" ]; then
-        (cd "$D" && tar -cvf "$B.ova" "$B.ovf" "$B.vmdk" "$B.mf")
+      # OVF/OVA export
+      if [ "${var.export_ovf}" = "true" ]; then
+        VMDK="$D/$B.vmdk"
+        OVF="$D/$B.ovf"
+        MF="$D/$B.mf"
+
+        # Pull virtual size in bytes from the VMDK we just created
+        DISK_BYTES=$(qemu-img info "$VMDK" | awk '/virtual size/ {match($0, /\(([0-9]+) bytes\)/, a); print a[1]}')
+
+        # Actual VMDK file size in bytes (BSD + GNU stat)
+        FILE_BYTES=$(stat -f%z "$VMDK" 2>/dev/null || stat -c%s "$VMDK")
+
+        cat > "$OVF" <<'OVF'
+  <?xml version="1.0" encoding="UTF-8"?>
+  <ovf:Envelope
+    xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+    xmlns:vmw="http://www.vmware.com/schema/ovf"
+    xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
+    xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
+    ovf:version="1.0">
+
+    <ovf:References>
+      <ovf:File ovf:id="file1" ovf:href="__B__.vmdk" ovf:size="__FILE_BYTES__"/>
+    </ovf:References>
+
+    <ovf:NetworkSection>
+      <ovf:Info>Logical networks used in the package</ovf:Info>
+      <ovf:Network ovf:name="__NETWORK__"/>
+    </ovf:NetworkSection>
+
+    <ovf:DiskSection>
+      <ovf:Info>Virtual disk information</ovf:Info>
+      <ovf:Disk ovf:diskId="vmdisk1" ovf:fileRef="file1"
+                ovf:capacity="__DISK_BYTES__"
+                ovf:capacityAllocationUnits="byte"
+                ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
+    </ovf:DiskSection>
+
+    <ovf:VirtualSystem ovf:id="__B__">
+      <ovf:Info>__OS_NAME__ __OS_VER__</ovf:Info>
+
+      <ovf:OperatingSystemSection ovf:id="101" vmw:osType="__GUEST_ID__">
+        <ovf:Info>Guest OS type</ovf:Info>
+        <ovf:Description>__OS_DESC__</ovf:Description>
+      </ovf:OperatingSystemSection>
+
+      <ovf:VirtualHardwareSection>
+        <ovf:Info>Virtual hardware requirements</ovf:Info>
+
+        <ovf:System>
+            <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
+            <vssd:InstanceID>0</vssd:InstanceID>
+            <vssd:VirtualSystemIdentifier>__B__</vssd:VirtualSystemIdentifier>
+            <vssd:VirtualSystemType>vmx-14</vssd:VirtualSystemType>
+          </ovf:System>
+
+        <ovf:Item>
+          <rasd:Description>Number of Virtual CPUs</rasd:Description>
+          <rasd:ElementName>__CPU__ virtual CPU(s)</rasd:ElementName>
+          <rasd:InstanceID>1</rasd:InstanceID>
+          <rasd:ResourceType>3</rasd:ResourceType>
+          <rasd:VirtualQuantity>__CPU__</rasd:VirtualQuantity>
+        </ovf:Item>
+
+        <ovf:Item>
+          <rasd:Description>Memory Size</rasd:Description>
+          <rasd:ElementName>__MEM__MB of memory</rasd:ElementName>
+          <rasd:InstanceID>2</rasd:InstanceID>
+          <rasd:ResourceType>4</rasd:ResourceType>
+          <rasd:VirtualQuantity>__MEM__</rasd:VirtualQuantity>
+          <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
+        </ovf:Item>
+
+        <ovf:Item>
+          <rasd:ElementName>SCSI Controller 0</rasd:ElementName>
+          <rasd:InstanceID>3</rasd:InstanceID>
+          <rasd:ResourceType>6</rasd:ResourceType>
+          <rasd:ResourceSubType>lsilogicsas</rasd:ResourceSubType>
+          <rasd:BusNumber>0</rasd:BusNumber>
+          <rasd:Address>0</rasd:Address>
+        </ovf:Item>
+
+        <ovf:Item>
+          <rasd:ElementName>Hard disk 1</rasd:ElementName>
+          <rasd:InstanceID>4</rasd:InstanceID>
+          <rasd:ResourceType>17</rasd:ResourceType>
+          <rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>
+          <rasd:Parent>3</rasd:Parent>
+          <rasd:AddressOnParent>0</rasd:AddressOnParent>
+        </ovf:Item>
+
+        <ovf:Item>
+          <rasd:ElementName>Network adapter 1</rasd:ElementName>
+          <rasd:InstanceID>5</rasd:InstanceID>
+          <rasd:ResourceType>10</rasd:ResourceType>
+          <rasd:ResourceSubType>VMXNET3</rasd:ResourceSubType>
+          <rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>
+          <rasd:Connection>__NETWORK__</rasd:Connection>
+        </ovf:Item>
+
+      </ovf:VirtualHardwareSection>
+    </ovf:VirtualSystem>
+  </ovf:Envelope>
+  OVF
+
+        # sed helper (BSD/GNU safe) + escaper
+        _inplace_sed() { if sed --version >/dev/null 2>&1; then sed -i "$1" "$2"; else sed -i '' "$1" "$2"; fi; }
+        esc() { printf '%s' "$1" | sed 's/[&/]/\\&/g'; }
+
+        NETWORK_NAME="$${NETWORK_NAME:-VM Network}"
+        GUEST_ID="$${GUEST_ID:-${var.vm_guest_os_type}}"
+        OS_NAME="$${OS_NAME:-${var.vm_guest_os_name}}"
+        OS_VER="$${OS_VER:-${var.vm_guest_os_version}}"
+        OS_DESC="$${OS_DESC:-${var.vm_guest_os_name} ${var.vm_guest_os_version}}"
+
+        _inplace_sed "s/__B__/$(esc "$B")/g" "$OVF"
+        _inplace_sed "s/__DISK_BYTES__/$(esc "$DISK_BYTES")/g" "$OVF"
+        _inplace_sed "s/__FILE_BYTES__/$(esc "$FILE_BYTES")/g" "$OVF"
+        _inplace_sed "s/__NETWORK__/$(esc "$NETWORK_NAME")/g" "$OVF"
+        _inplace_sed "s/__CPU__/$(esc "${var.vm_cpu_count}")/g" "$OVF"
+        _inplace_sed "s/__MEM__/$(esc "${var.vm_mem_size}")/g" "$OVF"
+        _inplace_sed "s/__OS_NAME__/$(esc "$OS_NAME")/g" "$OVF"
+        _inplace_sed "s/__OS_VER__/$(esc "$OS_VER")/g" "$OVF"
+        _inplace_sed "s/__OS_DESC__/$(esc "$OS_DESC")/g" "$OVF"
+        _inplace_sed "s/__GUEST_ID__/$(esc "$GUEST_ID")/g" "$OVF"
+
+        # Manifest
+        if command -v shasum >/dev/null 2>&1; then
+          (cd "$D" && shasum -a 256 "$B.ovf" "$B.vmdk" | awk '{print "SHA256(" $2 ")= " $1 }' > "$MF")
+        else
+          (cd "$D" && sha256sum "$B.ovf" "$B.vmdk" | awk '{print "SHA256(" $2 ")= " $1 }' > "$MF")
+        fi
+
+        # pack to OVA
+        if [ "${var.pack_ova}" = "true" ]; then
+          (cd "$D" && tar -cvf "$B.ova" "$B.ovf" "$B.vmdk" "$B.mf")
+        fi
       fi
-    fi
-EOT
+    EOT
     ]
   }
-
-
 
   // Publish just the converted files (+ qcow2)
   post-processor "artifice" {
