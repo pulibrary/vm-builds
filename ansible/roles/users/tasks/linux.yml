@@ -50,12 +50,14 @@
 - name: Create group for pulsys
   ansible.builtin.group:
     name: pulsys
+    gid: 1000
   when: pulsys_enabled
   tags: ['pulsys']
 
 - name: Create pulsys user
   ansible.builtin.user:
     name: pulsys
+    uid: 1000
     group: pulsys
     groups: sudo
     shell: /bin/bash

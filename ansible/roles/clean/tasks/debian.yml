@@ -2,11 +2,25 @@
 # Debian or derivative specific tasks.
 
 # Tasks for removing the cloud-init package.
-- name: Removing the cloud-init package.
-  ansible.builtin.apt:
-    name: cloud-init
-    state: absent
-  when: ansible_distribution == 'Ubuntu' and enable_cloudinit == 'false'
+- name: Permanently disable cloud-init when not desired
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - not (enable_cloudinit | bool)
+  block:
+    - ansible.builtin.copy:
+        dest: /etc/cloud/cloud-init.disabled
+        content: ""
+        mode: "0644"
+    - ansible.builtin.apt:
+        name: cloud-init
+        state: absent
+        purge: true
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/cloud
+        - /var/lib/cloud
 
 # Tasks to clean the audit logs.
 - name: Cleaning the audit logs.
