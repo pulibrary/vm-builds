@@ -93,3 +93,34 @@
     commands: ALL
   when: pulsys_enabled
   tags: ['pulsys']
+
+# Allow SSH for pulsys + the current ansible user during provisioning
+- name: Determine SSH service name
+  ansible.builtin.set_fact:
+    ssh_service_name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
+
+- name: Remove any existing AllowUsers lines (provisioning phase)
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*AllowUsers\b.*$'
+    replace: ''
+    backup: yes
+  when: not (cleanup_final_image | bool)
+  notify: Restart SSH
+
+- name: Ensure global AllowUsers permits pulsys and {{ ansible_user }} (provisioning phase)
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    insertbefore: '^Match\b'
+    marker: '# {mark} managed by Ansible (provisioning AllowUsers)'
+    block: |
+      AllowUsers pulsys {{ ansible_user }}
+  when: not (cleanup_final_image | bool)
+  notify: Restart SSH
+
+- name: Validate sshd configuration (provisioning phase)
+  ansible.builtin.command: /usr/sbin/sshd -t -f /etc/ssh/sshd_config
+  register: sshd_check_build
+  changed_when: false
+  failed_when: sshd_check_build.rc != 0
+  when: not (cleanup_final_image | bool)
