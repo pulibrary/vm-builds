@@ -1,5 +1,4 @@
-# Preferred Rocky Linux mirrors (Princeton)
-# Lower cost => preferred by DNF when multiple mirrors exist
+# Preferred Rocky Linux mirrors (Princeton) — additive, does not disable stock repos
 [rocky-baseos-princeton]
 name=Rocky Linux $releasever - BaseOS (Princeton)
 baseurl=http://{{ princeton_mirror_host }}/pub/rocky/$releasever/BaseOS/$basearch/os/
@@ -27,7 +26,6 @@ gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rockyofficial
 skip_if_unavailable=False
 cost=10
 
-# Rocky 9: CRB (a.k.a. PowerTools in 8)
 [rocky-crb-princeton]
 name=Rocky Linux $releasever - CRB (Princeton)
 baseurl=http://{{ princeton_mirror_host }}/pub/rocky/$releasever/CRB/$basearch/os/
@@ -36,3 +34,4 @@ gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rockyofficial
 skip_if_unavailable=False
 cost=10
+
