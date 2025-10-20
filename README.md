@@ -17,6 +17,7 @@ devbox shell
 ```
 
 This will automatically install all required tools:
+
 - Packer
 - Ansible
 - Python
@@ -29,6 +30,7 @@ This will automatically install all required tools:
 ### Manual Installation
 
 If not using Devbox, (you know what you're doing :wink:) manually install:
+
 - Packer >= 1.12.0
 - Ansible >= 2.9
 - Python >= 3.8
@@ -81,6 +83,7 @@ Copy `.env.example` to `.env` and fill in values. Get these from the [Prancible]
 - `FALCON_CID`
 
 ### Build
+
 ```bash
 set -a; source .env; set +a
 just build-ubuntu-aws
@@ -90,7 +93,7 @@ just build-rocky-qemu 'sha256:<rocky sha256>' true
 
 ## Project Structure
 
-```
+```text
 .
 ├── ansible/                   # Ansible provisioning
 │   ├── roles/
@@ -149,11 +152,13 @@ packer build -var "gcp_project_id=pul-gcdc" \
 ## Ansible Roles
 
 ### base
+
 - Updates all packages to latest
 - Installs essential packages
 - Configures cloud-init (when enabled)
 
 ### users
+
 - Creates `pulsys` user with sudo access
 - Pulls SSH keys from GitHub for:
   - Operations staff
@@ -162,12 +167,14 @@ packer build -var "gcp_project_id=pul-gcdc" \
 - Manages build users (`packer`, `ubuntu`)
 
 ### configure
+
 - Enables SSH public key authentication
 - Sets hostname to `lib-vm`
 - Configures cloud-init datasources
 - Regenerates SSH host keys on first boot
 
 ### clean
+
 - Removes temporary files and logs
 - Cleans build artifacts
 - Optionally removes build users
@@ -197,6 +204,7 @@ To add/remove users, update the lists in `ansible/roles/users/defaults/main.yml`
 ### Build Cleanup
 
 Set `cleanup_final_image=true` to remove build users from the final image:
+
 ```bash
 packer build -var "cleanup_final_image=true" [template]
 ```
@@ -243,24 +251,29 @@ cleanup_final_image = true    # Remove build artifacts
 ## Troubleshooting
 
 ### ISO Checksum Error
+
 **Problem**: `invalid checksum: encoding/hex: invalid byte`
 **Solution**: Download the ISO and update the checksum in the `.pkr.hcl` file
 
 ### SSH Timeout During Build
+
 **Problem**: Packer can't connect to the VM
 **Solution**: Check QEMU is working and increase `ssh_timeout`
 
 ### Missing Dependencies
+
 **Problem**: Command not found errors
 **Solution**: Use `devbox shell` or install missing tools manually
 
 ### Build Users Remain in Image
+
 **Problem**: `ubuntu` or `packer` users still present
 **Solution**: Set `-var "cleanup_final_image=true"` during build
 
 ## Build Manifests
 
 Each build generates a manifest in `manifests/` containing:
+
 - Build timestamp
 - Git commit hash
 - Image metadata
@@ -284,4 +297,4 @@ See [LICENSE](LICENSE) file for details.
 ---
 
 **Maintained by**: Princeton University Library
-**Repository**: https://github.com/pulibrary/vm-builds
+**Repository**: <https://github.com/pulibrary/vm-builds>

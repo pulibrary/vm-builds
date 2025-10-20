@@ -103,3 +103,6 @@
 
 - name: Cleanup builder/cloud-init users (Debian family)
   ansible.builtin.include_tasks: users.yml
+
+- name: SSH hardening (AllowUsers pulsys only on final image)
+  ansible.builtin.include_tasks: ssh_harden.yml

@@ -1,0 +1,34 @@
+---
+# Only apply this when producing the final image
+- name: Ensure sshd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    mode: "0755"
+  when: cleanup_final_image | bool
+
+- name: Restrict SSH to user 'pulsys' via drop-in (no restart now)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-allowusers-pulsys.conf
+    mode: "0644"
+    content: |
+      # Managed by Ansible
+      AllowUsers pulsys
+  when: cleanup_final_image | bool
+
+# After the clean role, host keys may be gone; validate only if some remain.
+- name: Check if any ssh host keys exist
+  ansible.builtin.find:
+    paths: /etc/ssh
+    patterns: "ssh_host_*"
+    file_type: file
+  register: _ssh_keys_after_cleanup
+  when: cleanup_final_image | bool
+
+- name: Validate sshd configuration (only when keys exist)
+  ansible.builtin.command: /usr/sbin/sshd -t -f /etc/ssh/sshd_config
+  changed_when: false
+  when:
+    - cleanup_final_image | bool
+    - (_ssh_keys_after_cleanup.matched | default(0) | int) > 0
+
