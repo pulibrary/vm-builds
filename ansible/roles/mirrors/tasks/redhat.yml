@@ -1,0 +1,21 @@
+---
+- name: Ensure repo tools present
+  ansible.builtin.package:
+    name: dnf-plugins-core
+    state: present
+  when: ansible_pkg_mgr == 'dnf'
+
+- name: Add Princeton Rocky repo (preferred by low cost)
+  ansible.builtin.template:
+    src: rocky-princeton.repo.j2
+    dest: /etc/yum.repos.d/00-princeton-rocky.repo
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == 'RedHat'
+
+- name: Build DNF cache (quiet)
+  ansible.builtin.command: dnf -q makecache
+  args: { warn: false }
+  changed_when: false
+  when: ansible_pkg_mgr == 'dnf'

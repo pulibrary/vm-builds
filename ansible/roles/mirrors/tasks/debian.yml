@@ -1,0 +1,39 @@
+---
+- name: Gather LSB facts (for codename)
+  ansible.builtin.setup:
+    filter: ansible_lsb*
+  when: ansible_lsb is not defined
+
+- name: Add Princeton mirror (primary entries)
+  ansible.builtin.apt_repository:
+    filename: "00-princeton"
+    repo: "deb http://{{ princeton_mirror_host }}/ubuntu {{ ansible_lsb.codename }} main restricted universe multiverse"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add Princeton -updates
+  ansible.builtin.apt_repository:
+    filename: "00-princeton"
+    repo: "deb http://{{ princeton_mirror_host }}/ubuntu {{ ansible_lsb.codename }}-updates main restricted universe multiverse"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add Princeton -backports
+  ansible.builtin.apt_repository:
+    filename: "00-princeton"
+    repo: "deb http://{{ princeton_mirror_host }}/ubuntu {{ ansible_lsb.codename }}-backports main restricted universe multiverse"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Add Princeton -security
+  ansible.builtin.apt_repository:
+    filename: "00-princeton"
+    repo: "deb http://{{ princeton_mirror_host }}/ubuntu {{ ansible_lsb.codename }}-security main restricted universe multiverse"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: apt update (quiet)
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == 'Debian'
