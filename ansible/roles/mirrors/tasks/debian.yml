@@ -1,0 +1,61 @@
+---
+- name: Gather LSB facts (for codename)
+  ansible.builtin.setup:
+    filter: ansible_lsb*
+  when: ansible_lsb is not defined
+
+- name: Determine Ubuntu codename
+  ansible.builtin.set_fact:
+    ubuntu_codename: "{{ ansible_distribution_release | default(ansible_lsb.codename) }}"
+
+# Put Princeton first for archive/updates/backports (correct base path!)
+- name: Add Princeton mirror (archive/updates/backports)
+  ansible.builtin.apt_repository:
+    repo: "deb https://mirror.math.princeton.edu/pub/ubuntu {{ item }} main restricted universe multiverse"
+    state: present
+    filename: "00-princeton"
+    update_cache: no
+  loop:
+    - "{{ ubuntu_codename }}"
+    - "{{ ubuntu_codename }}-updates"
+    - "{{ ubuntu_codename }}-backports"
+
+- name: Check if 10-security.list exists
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list.d/10-security.list
+  register: sec_list
+
+- name: Comment duplicate -security lines in /etc/apt/sources.list
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb\s+.*\b{{ ubuntu_codename }}-security\b.*)$'
+    replace: '# \1'
+  when: sec_list.stat.exists
+  notify: apt update
+
+# Keep security on Canonical
+- name: Ensure default security repo is present
+  ansible.builtin.apt_repository:
+    repo: "deb http://security.ubuntu.com/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
+    state: present
+    filename: "10-security"
+    update_cache: no
+
+# Soft-prefer Princeton without breaking fallbacks
+- name: Pin Princeton mirror slightly higher than defaults
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/99-princeton.pref
+    mode: "0644"
+    content: |
+      Package: *
+      Pin: origin "mirror.math.princeton.edu"
+      Pin-Priority: 600
+
+- name: apt update (with retries)
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  register: aptu
+  retries: 5
+  delay: 3
+  until: aptu is succeeded
