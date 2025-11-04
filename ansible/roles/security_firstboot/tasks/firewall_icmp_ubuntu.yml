@@ -76,14 +76,12 @@
   register: iptables_check
   ignore_errors: true
   changed_when: false
-  when: manage_firewall
   tags: [icmp_redirects, firewall]
 
 - name: Insert DROP rule for IPv4 ICMP redirects (if missing) - iptables
   ansible.builtin.command:
     cmd: iptables -I INPUT -p icmp --icmp-type redirect -j DROP
   when:
-    - manage_firewall
     - iptables_check.rc != 0
   tags: [icmp_redirects, firewall]
 
@@ -93,13 +91,11 @@
   register: ip6tables_check
   ignore_errors: true
   changed_when: false
-  when: manage_firewall
   tags: [icmp_redirects, firewall]
 
 - name: Insert DROP rule for IPv6 ICMP redirects (if missing) - ip6tables
   ansible.builtin.command:
     cmd: ip6tables -I INPUT -p ipv6-icmp --icmpv6-type redirect -j DROP
   when:
-    - manage_firewall
     - ip6tables_check.rc != 0
   tags: [icmp_redirects, firewall]
