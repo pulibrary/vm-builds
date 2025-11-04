@@ -108,6 +108,11 @@
   tags: ["firstboot"]
 
 - name: Configure firewall & fail2ban (Debian/Ubuntu)
+  ansible.builtin.include_tasks: firewall_icmp_ubuntu.yml
+  when: ansible_os_family == "Debian"
+  tags: ['firewall','ssh','security']
+
+- name: Configure firewall & fail2ban (Debian/Ubuntu)
   ansible.builtin.include_tasks: firewall_ubuntu.yml
   when: ansible_os_family == "Debian"
   tags: ['firewall','ssh','security']

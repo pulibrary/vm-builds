@@ -15,8 +15,8 @@ bigfix_deb_url: "https://software.bigfix.com/download/bes/100/BESAgent-10.0.7.52
 bigfix_rpm_url: "https://software.bigfix.com/download/bes/100/BESAgent-10.0.7.52-rhe6.x86_64.rpm"
 bigfix_gpg_key_url: "https://software.bigfix.com/download/bes/95/RPM-GPG-KEY-BigFix-9-V2"
 
-rapid7_deb_url: "https://isoshare.cpaneldev.princeton.edu/isoShares/Agents/Rapid7/Latest/Linux/rapid7-insight-agent_latest_amd64.deb"
-rapid7_rpm_url: "https://isoshare.cpaneldev.princeton.edu/isoShares/Agents/Rapid7/Latest/Linux/rapid7-insight-agent-latest.x86_64.rpm"
+rapid7_deb_url: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/rapid7_insight_agent_x64.deb"
+rapid7_rpm_url: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/rapid7_insight_agent_x64.rpm"
 rapid7_rpm_pubkey: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/Rapid7_public_key.pub"
 
 # CrowdStrike Falcon (first-boot)

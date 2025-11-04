@@ -1,4 +1,5 @@
 ---
+# ICMP redirects
 # Ensure UFW installed & enabled first
 - name: Install ufw (Debian/Ubuntu)
   ansible.builtin.apt:
