@@ -32,7 +32,7 @@ RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
 RUN python3 -m pip install --upgrade pip \
     && python3 -m pip install \
-         ansible-core==2.16.3 \
+         ansible-core==2.15.13 \
          pyopenssl
 
 COPY ansible/collections.yaml /tmp/collections.yaml

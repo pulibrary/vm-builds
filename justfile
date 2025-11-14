@@ -141,3 +141,43 @@ build-everything project_id ubuntu_iso_checksum rocky_iso_checksum:
     just build-all-qemu {{ ubuntu_iso_checksum }} {{ rocky_iso_checksum }}
     just build-all-cloud {{ project_id }} {{ ubuntu_iso_checksum }} {{ rocky_iso_checksum }}
     @echo "PACKER: Everything built."
+
+# All images are tagged into GitHub Container Registry under this namespace
+DOCKER_NAMESPACE := "ghcr.io/pulibrary/vm-builds"
+
+# Login helper.
+# Uses (in order): GHCR_PAT, GITHUB_TOKEN, GH_TOKEN
+ghcr-login:
+    @user="${GITHUB_ACTOR:-pulibrary}"; \
+     token="${GHCR_PAT:-${GITHUB_TOKEN:-$GH_TOKEN}}"; \
+     if [ -z "$token" ]; then \
+       echo "ERROR: Set GHCR_PAT (or GITHUB_TOKEN / GH_TOKEN) before running this." >&2; \
+       exit 1; \
+     fi; \
+     echo "$token" | docker login ghcr.io -u "$user" --password-stdin
+
+# Build Ubuntu 22.04 systemd-capable Ansible control image
+# Uses docker/ubuntu/Dockerfile
+build-ubuntu-docker tag="dev":
+    docker build \
+      -f docker/ubuntu/Dockerfile \
+      -t {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}} \
+      .
+
+# Push Ubuntu image to GHCR
+push-ubuntu-docker tag="dev":
+    just ghcr-login
+    docker push {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}}
+
+# Build Rocky 9 systemd-capable Ansible control image
+# Uses docker/rocky/Dockerfile
+build-rocky-docker tag="dev":
+    docker build \
+      -f docker/rocky/Dockerfile \
+      -t {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
+      .
+
+# Push Rocky image to GHCR
+push-rocky-docker tag="dev":
+    just ghcr-login
+    docker push {{DOCKER_NAMESPACE}}/rocky-9:{{tag}}
