@@ -164,10 +164,28 @@ build-ubuntu-docker tag="dev":
       -t {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}} \
       .
 
+# Multi-arch build & push for Ubuntu
+build-ubuntu-docker-multi tag="dev":
+    docker buildx build \
+      --platform linux/amd64,linux/arm64/v8 \
+      -f docker/ubuntu/Dockerfile \
+      -t {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}} \
+      --push \
+      .
+
 # Push Ubuntu image to GHCR
 push-ubuntu-docker tag="dev":
     just ghcr-login
     docker push {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}}
+
+# Multi-arch build & push for Rocky
+build-rocky-docker-multi tag="dev":
+    docker buildx build \
+      --platform linux/amd64,linux/arm64/v8 \
+      -f docker/rocky/Dockerfile \
+      -t {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
+      --push \
+      .
 
 # Build Rocky 9 systemd-capable Ansible control image
 # Uses docker/rocky/Dockerfile
