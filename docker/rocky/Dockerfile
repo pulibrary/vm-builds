@@ -1,14 +1,11 @@
 # docker/rocky/Dockerfile
 # syntax = docker/dockerfile:1.4
 
-ARG TARGETARCH=linux/amd64
-
-FROM --platform=$TARGETARCH rockylinux:9
+FROM rockylinux:9
 
 ENV TZ=UTC \
     container=docker
 
-# Base OS + systemd + useful tools
 RUN dnf -y update \
     && dnf -y install \
        systemd \
@@ -21,15 +18,13 @@ RUN dnf -y update \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
-# pulsys admin user
 RUN useradd -m -s /bin/bash pulsys && \
     echo "pulsys ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
     chmod 440 /etc/sudoers.d/99-pulsys
 
-# Prepare systemd dirs
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
-
+# ansible-core 2.15.x works with Python 3.9
 RUN python3 -m pip install --upgrade pip \
     && python3 -m pip install \
          ansible-core==2.15.13 \
@@ -47,11 +42,10 @@ RUN mkdir -p /root/.ansible/tmp /tmp/ansible \
     && chmod -R 777 /root/.ansible/tmp \
     && chmod -R 1777 /tmp/ansible
 
-# ---------------------------------------------------------------------------
-
 EXPOSE 22
 
 STOPSIGNAL SIGRTMIN+3
 VOLUME ["/sys/fs/cgroup", "/run", "/tmp"]
 
 CMD ["/sbin/init"]
+

@@ -1,9 +1,7 @@
 # docker/ubuntu/Dockerfile
 # syntax = docker/dockerfile:1.4
 
-ARG TARGETARCH=linux/amd64
-
-FROM --platform=$TARGETARCH ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
@@ -30,31 +28,23 @@ RUN useradd -m -s /bin/bash pulsys && \
 # Prepare systemd dirs
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
-# --- Ansible control-host bits ---------------------------------------------
-
-# Install Ansible + deps
+# Ansible bits
 RUN python3 -m pip install --upgrade pip \
     && python3 -m pip install \
          ansible-core==2.16.3 \
          pyopenssl
 
-# Copy collections file from repo and install
-# (build context is repo root)
 COPY ansible/collections.yaml /tmp/collections.yaml
 
 RUN ansible-galaxy collection install -r /tmp/collections.yaml \
     && rm -f /tmp/collections.yaml
 
-# Minimal local inventory
 RUN mkdir -p /etc/ansible \
     && printf "[local]\nlocalhost ansible_connection=local\n" > /etc/ansible/hosts
 
-# Ansible temp dirs
 RUN mkdir -p /root/.ansible/tmp /tmp/ansible \
     && chmod -R 777 /root/.ansible/tmp \
     && chmod -R 1777 /tmp/ansible
-
-# ---------------------------------------------------------------------------
 
 EXPOSE 22
 
