@@ -16,13 +16,13 @@ bigfix_rpm_url: "https://software.bigfix.com/download/bes/100/BESAgent-10.0.7.52
 bigfix_gpg_key_url: "https://software.bigfix.com/download/bes/95/RPM-GPG-KEY-BigFix-9-V2"
 
 rapid7_deb_url: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/rapid7_insight_agent_x64.deb"
-rapid7_rpm_url: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/rapid7_insight_agent_x64.rpm"
+rapid7_rpm_url: "https://us.storage.endpoint.ingress.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/rapid7_insight_agent_x64.rpm"
 rapid7_rpm_pubkey: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.razor.public/endpoint/agent/latest/linux/x86_64/Rapid7_public_key.pub"
 
-# CrowdStrike Falcon (first-boot)
-falcon_sensor_deb_url: ""     # can we try a temporary pre-signed/package URL for Debian/Ubuntu
-falcon_sensor_rpm_url: ""     # can we try a temporary pre-signed/package URL for RHEL/Rocky
-falcon_api_base: "https://api.crowdstrike.com"
+# Palo Alto Cortex XDR (first-boot)
+# Different tarballs for DEB-based (Ubuntu/Debian) vs RPM-based (Rocky/RHEL)
+cortex_xdr_deb_tarball_url: "http://pulmirror.princeton.edu/mirror/palo/greenfield/Linux-11062025_deb.tar.gz"
+cortex_xdr_rpm_tarball_url: "http://pulmirror.princeton.edu/mirror/palo/greenfield/Linux-11062025_rpm.tar.gz"
 
 allowed_admin_cidrs:
   - 10.249.64.0/18
@@ -72,4 +72,3 @@ ufw_enable_now: true
 firewalld_zone: public
 
 security_local_test: false
-
