@@ -22,6 +22,7 @@
       # BIGFIX_MASTHEAD_URL=
       # RAPID7_TOKEN=
       # RAPID7_ATTRIBUTES="Library Systems"
+      # CORTEX_XDR_TARBALL_URL=
     force: no
   tags: ["firstboot"]
 
@@ -40,8 +41,8 @@
         dest: "/usr/local/sbin/rapid7-firstboot.sh",
       }
     - {
-        src: "falcon-firstboot.sh.j2",
-        dest: "/usr/local/sbin/falcon-firstboot.sh",
+        src: "cortex-xdr-firstboot.sh.j2",
+        dest: "/usr/local/sbin/cortex-xdr-firstboot.sh",
       }
   tags: ["firstboot"]
 
@@ -85,19 +86,19 @@
 
         [Install]
         WantedBy=cloud-final.service
-    - name: falcon-firstboot.service
+    - name: cortex-xdr-firstboot.service
       content: |
         [Unit]
-        Description=CrowdStrike Falcon first-boot installer
+        Description=Palo Alto Cortex XDR first-boot installer
         Wants=network-online.target
         After=network-online.target
-        ConditionPathExists=!/var/lib/security-firstboot/falcon.done
+        ConditionPathExists=!/var/lib/security-firstboot/cortex-xdr.done
         PartOf=cloud-final.service
 
         [Service]
         Type=oneshot
         EnvironmentFile=-{{ security_env_file }}
-        ExecStart=/usr/local/sbin/falcon-firstboot.sh
+        ExecStart=/usr/local/sbin/cortex-xdr-firstboot.sh
         RemainAfterExit=yes
 
         [Install]
