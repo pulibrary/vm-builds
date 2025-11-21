@@ -9,16 +9,23 @@ WORK_DIR="/tmp/cortex-xdr-install"
 mkdir -p "$STATE_DIR"
 
 # Env provided by systemd EnvironmentFile (/etc/pul/security-tools.env)
+: "${CORTEX_XDR_DISTRIBUTION_ID:=}"
+: "${CORTEX_XDR_DISTRIBUTION_SERVER:=https://distributions.traps.paloaltonetworks.com/}"
+
 # Determine which tarball URL to use based on OS family
 if command -v dpkg >/dev/null 2>&1; then
-  # Debian/Ubuntu - use DEB tarball
   CORTEX_TARBALL_URL="${CORTEX_XDR_DEB_TARBALL_URL:-{{ cortex_xdr_deb_tarball_url }}}"
 else
-  # RHEL/Rocky - use RPM tarball
   CORTEX_TARBALL_URL="${CORTEX_XDR_RPM_TARBALL_URL:-{{ cortex_xdr_rpm_tarball_url }}}"
 fi
 
 [[ -f "$MARKER" ]] && exit 0
+
+# Check for required configuration
+if [[ -z "$CORTEX_XDR_DISTRIBUTION_ID" ]]; then
+  echo "Cortex XDR: no CORTEX_XDR_DISTRIBUTION_ID provided; skipping."
+  exit 0
+fi
 
 if [[ -z "$CORTEX_TARBALL_URL" ]]; then
   echo "Cortex XDR: no tarball URL configured for this OS; skipping."
@@ -39,29 +46,19 @@ curl -fsSL --max-time 120 "$CORTEX_TARBALL_URL" -o cortex-xdr.tar.gz || {
 echo "Cortex XDR: extracting tarball..."
 tar xzf cortex-xdr.tar.gz
 
-# The tarball should contain cortex.conf and DEB or RPM packages
-# Following the manual installation steps from README
+# Generate cortex.conf from environment variables
+echo "Cortex XDR: generating configuration..."
+mkdir -p /etc/panw
+cat > /etc/panw/cortex.conf << EOF
+--distribution-id ${CORTEX_XDR_DISTRIBUTION_ID}
+--distribution-server ${CORTEX_XDR_DISTRIBUTION_SERVER}
+EOF
+chmod 0600 /etc/panw/cortex.conf
+echo "Cortex XDR: configuration written to /etc/panw/cortex.conf"
 
-# Step 1: Copy cortex.conf to /etc/panw/
-if [[ -f cortex.conf ]]; then
-  echo "Cortex XDR: installing configuration..."
-  mkdir -p /etc/panw
-  cp cortex.conf /etc/panw/
-  chmod 0600 /etc/panw/cortex.conf
-else
-  echo "Cortex XDR: WARNING - cortex.conf not found in tarball"
-fi
-
-# Step 2: Import GPG key if available
-{% if cortex_xdr_gpg_key_url %}
-echo "Cortex XDR: importing GPG key..."
-curl -fsSL "{{ cortex_xdr_gpg_key_url }}" | rpm --import - || true
-{% endif %}
-
-# Step 3: Install package (DEB or RPM based on OS)
+# Install package (DEB or RPM based on OS)
 installed=false
 if command -v dpkg >/dev/null 2>&1; then
-  # Debian/Ubuntu - install DEB
   CORTEX_DEB=$(find . -name "*.deb" -type f | head -n1)
   if [[ -n "$CORTEX_DEB" && -f "$CORTEX_DEB" ]]; then
     echo "Cortex XDR: installing DEB package $CORTEX_DEB..."
@@ -73,7 +70,6 @@ if command -v dpkg >/dev/null 2>&1; then
     echo "Cortex XDR: no DEB package found in tarball"
   fi
 else
-  # RHEL/Rocky - install RPM
   CORTEX_RPM=$(find . -name "*.rpm" -type f | head -n1)
   if [[ -n "$CORTEX_RPM" && -f "$CORTEX_RPM" ]]; then
     echo "Cortex XDR: installing RPM package $CORTEX_RPM..."
@@ -90,13 +86,8 @@ cd /
 rm -rf "$WORK_DIR"
 
 if [[ "$installed" == true ]]; then
-  # Enable and start the service (adjust service name as needed)
-  # The actual service name may vary - common names include:
-  # - cytool (Cortex XDR agent service)
-  # - traps_pmd (older versions)
   systemctl enable --now cytool.service 2>/dev/null || true
   systemctl enable --now traps_pmd.service 2>/dev/null || true
-  
   touch "$MARKER"
   echo "Cortex XDR: installed successfully."
 else

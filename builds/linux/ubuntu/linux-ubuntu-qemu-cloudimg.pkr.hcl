@@ -411,6 +411,17 @@ variable "CORTEX_XDR_DEB_TARBALL_URL" {
   default = env("CORTEX_XDR_DEB_TARBALL_URL")
 }
 
+variable "CORTEX_XDR_DISTRIBUTION_ID" {
+  type      = string
+  default   = env("CORTEX_XDR_DISTRIBUTION_ID")
+  sensitive = true
+}
+
+variable "CORTEX_XDR_DISTRIBUTION_SERVER" {
+  type    = string
+  default = env("CORTEX_XDR_DISTRIBUTION_SERVER")
+}
+
 
 ////////////////////
 // Data & Locals  //
@@ -462,10 +473,12 @@ locals {
     additional_packages = var.additional_packages
 
     # the security first-boot vars
-    BIGFIX_MASTHEAD_URL        = var.BIGFIX_MASTHEAD_URL
-    RAPID7_TOKEN               = var.RAPID7_TOKEN
-    RAPID7_ATTRIBUTES          = var.RAPID7_ATTRIBUTES
-    CORTEX_XDR_DEB_TARBALL_URL = var.CORTEX_XDR_DEB_TARBALL_URL
+    BIGFIX_MASTHEAD_URL            = var.BIGFIX_MASTHEAD_URL
+    RAPID7_TOKEN                   = var.RAPID7_TOKEN
+    RAPID7_ATTRIBUTES              = var.RAPID7_ATTRIBUTES
+    CORTEX_XDR_DEB_TARBALL_URL     = var.CORTEX_XDR_DEB_TARBALL_URL
+    CORTEX_XDR_DISTRIBUTION_ID     = var.CORTEX_XDR_DISTRIBUTION_ID
+    CORTEX_XDR_DISTRIBUTION_SERVER = var.CORTEX_XDR_DISTRIBUTION_SERVER
   }
 
   // cloud-init seed (NoCloud)

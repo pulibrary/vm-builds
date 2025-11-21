@@ -24,6 +24,11 @@ rapid7_rpm_pubkey: "https://us.storage.endpoint.ingress.rapid7.com/com.rapid7.ra
 cortex_xdr_deb_tarball_url: "http://pulmirror.princeton.edu/mirror/palo/greenfield/Linux-11062025_deb.tar.gz"
 cortex_xdr_rpm_tarball_url: "http://pulmirror.princeton.edu/mirror/palo/greenfield/Linux-11062025_rpm.tar.gz"
 
+# Cortex XDR configuration
+cortex_xdr_distribution_id: "{{ lookup('env', 'CORTEX_XDR_DISTRIBUTION_ID') | default('', true) }}"
+cortex_xdr_distribution_server: "{{ lookup('env', 'CORTEX_XDR_DISTRIBUTION_SERVER') | default('https://distributions.traps.paloaltonetworks.com/', true) }}"
+
+
 allowed_admin_cidrs:
   - 10.249.64.0/18
   - 10.249.0.0/18
