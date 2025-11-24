@@ -343,9 +343,20 @@ variable "RAPID7_ATTRIBUTES" {
   default = env("RAPID7_ATTRIBUTES")
 }
 
-variable "FALCON_CID" {
+variable "CORTEX_XDR_RPM_TARBALL_URL" {
   type    = string
-  default = env("FALCON_CID")
+  default = env("CORTEX_XDR_RPM_TARBALL_URL")
+}
+
+variable "CORTEX_XDR_DISTRIBUTION_ID" {
+  type      = string
+  default   = env("CORTEX_XDR_DISTRIBUTION_ID")
+  sensitive = true
+}
+
+variable "CORTEX_XDR_DISTRIBUTION_SERVER" {
+  type    = string
+  default = env("CORTEX_XDR_DISTRIBUTION_SERVER")
 }
 
 
@@ -399,10 +410,12 @@ locals {
     additional_packages = var.additional_packages
 
     # the security first-boot vars
-    BIGFIX_MASTHEAD_URL = var.BIGFIX_MASTHEAD_URL
-    RAPID7_TOKEN        = var.RAPID7_TOKEN
-    RAPID7_ATTRIBUTES   = var.RAPID7_ATTRIBUTES
-    FALCON_CID          = var.FALCON_CID
+    BIGFIX_MASTHEAD_URL            = var.BIGFIX_MASTHEAD_URL
+    RAPID7_TOKEN                   = var.RAPID7_TOKEN
+    RAPID7_ATTRIBUTES              = var.RAPID7_ATTRIBUTES
+    CORTEX_XDR_RPM_TARBALL_URL     = var.CORTEX_XDR_RPM_TARBALL_URL
+    CORTEX_XDR_DISTRIBUTION_ID     = var.CORTEX_XDR_DISTRIBUTION_ID
+    CORTEX_XDR_DISTRIBUTION_SERVER = var.CORTEX_XDR_DISTRIBUTION_SERVER
   }
   // cloud-init seed (NoCloud)
   data_source_content = {

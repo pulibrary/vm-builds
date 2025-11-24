@@ -10,7 +10,7 @@
   loop:
     - bigfix-firstboot.service
     - rapid7-firstboot.service
-    - falcon-firstboot.service
+    - cortex-xdr-firstboot.service
 
 - name: restart fail2ban
   ansible.builtin.service:

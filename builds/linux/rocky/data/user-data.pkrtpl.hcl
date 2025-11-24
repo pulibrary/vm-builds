@@ -69,8 +69,10 @@ write_files:
       # Rapid7
       RAPID7_TOKEN=${RAPID7_TOKEN}
       RAPID7_ATTRIBUTES="Library Systems"
-      # CrowdStrike Falcon
-      FALCON_CID=${FALCON_CID}
+      # Palo Alto Cortex XDR
+      CORTEX_XDR_RPM_TARBALL_URL=${CORTEX_XDR_RPM_TARBALL_URL}
+      CORTEX_XDR_DISTRIBUTION_ID=${CORTEX_XDR_DISTRIBUTION_ID}
+      CORTEX_XDR_DISTRIBUTION_SERVER=${CORTEX_XDR_DISTRIBUTION_SERVER}
 
 runcmd:
   # ensure wheel has passwordless sudo (some images have it already)

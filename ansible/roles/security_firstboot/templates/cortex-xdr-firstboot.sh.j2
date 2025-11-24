@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+set -euo pipefail
+
+STATE_DIR="/var/lib/security-firstboot"
+MARKER="${STATE_DIR}/cortex-xdr.done"
+WORK_DIR="/tmp/cortex-xdr-install"
+
+mkdir -p "$STATE_DIR"
+
+# Env provided by systemd EnvironmentFile (/etc/pul/security-tools.env)
+: "${CORTEX_XDR_DISTRIBUTION_ID:=}"
+: "${CORTEX_XDR_DISTRIBUTION_SERVER:=https://distributions.traps.paloaltonetworks.com/}"
+
+# Determine which tarball URL to use based on OS family
+if command -v dpkg >/dev/null 2>&1; then
+  CORTEX_TARBALL_URL="${CORTEX_XDR_DEB_TARBALL_URL:-{{ cortex_xdr_deb_tarball_url }}}"
+else
+  CORTEX_TARBALL_URL="${CORTEX_XDR_RPM_TARBALL_URL:-{{ cortex_xdr_rpm_tarball_url }}}"
+fi
+
+[[ -f "$MARKER" ]] && exit 0
+
+# Check for required configuration
+if [[ -z "$CORTEX_XDR_DISTRIBUTION_ID" ]]; then
+  echo "Cortex XDR: no CORTEX_XDR_DISTRIBUTION_ID provided; skipping."
+  exit 0
+fi
+
+if [[ -z "$CORTEX_TARBALL_URL" ]]; then
+  echo "Cortex XDR: no tarball URL configured for this OS; skipping."
+  exit 0
+fi
+
+# Create working directory
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
+
+echo "Cortex XDR: downloading tarball from $CORTEX_TARBALL_URL..."
+curl -fsSL --max-time 120 "$CORTEX_TARBALL_URL" -o cortex-xdr.tar.gz || {
+  echo "Cortex XDR: cannot fetch tarball; skipping."
+  rm -rf "$WORK_DIR"
+  exit 0
+}
+
+echo "Cortex XDR: extracting tarball..."
+tar xzf cortex-xdr.tar.gz
+
+# Generate cortex.conf from environment variables
+echo "Cortex XDR: generating configuration..."
+mkdir -p /etc/panw
+cat > /etc/panw/cortex.conf << EOF
+--distribution-id ${CORTEX_XDR_DISTRIBUTION_ID}
+--distribution-server ${CORTEX_XDR_DISTRIBUTION_SERVER}
+EOF
+chmod 0600 /etc/panw/cortex.conf
+echo "Cortex XDR: configuration written to /etc/panw/cortex.conf"
+
+# Install package (DEB or RPM based on OS)
+installed=false
+if command -v dpkg >/dev/null 2>&1; then
+  CORTEX_DEB=$(find . -name "*.deb" -type f | head -n1)
+  if [[ -n "$CORTEX_DEB" && -f "$CORTEX_DEB" ]]; then
+    echo "Cortex XDR: installing DEB package $CORTEX_DEB..."
+    apt-get update -y || true
+    if apt-get -y install "$CORTEX_DEB"; then
+      installed=true
+    fi
+  else
+    echo "Cortex XDR: no DEB package found in tarball"
+  fi
+else
+  CORTEX_RPM=$(find . -name "*.rpm" -type f | head -n1)
+  if [[ -n "$CORTEX_RPM" && -f "$CORTEX_RPM" ]]; then
+    echo "Cortex XDR: installing RPM package $CORTEX_RPM..."
+    if dnf -y install "$CORTEX_RPM" 2>/dev/null || yum -y install "$CORTEX_RPM"; then
+      installed=true
+    fi
+  else
+    echo "Cortex XDR: no RPM package found in tarball"
+  fi
+fi
+
+# Cleanup
+cd /
+rm -rf "$WORK_DIR"
+
+if [[ "$installed" == true ]]; then
+  systemctl enable --now cytool.service 2>/dev/null || true
+  systemctl enable --now traps_pmd.service 2>/dev/null || true
+  touch "$MARKER"
+  echo "Cortex XDR: installed successfully."
+else
+  echo "Cortex XDR: installation failed."
+fi
+
+exit 0
