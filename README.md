@@ -340,7 +340,7 @@ ansible-galaxy collection list
 ### configure
 
 - Enables SSH public key authentication
-- Sets hostname to `lib-vm`
+- Sets hostname to `localhost`
 - Configures cloud-init datasources
 - Regenerates SSH host keys on first boot
 
