@@ -62,6 +62,6 @@ RUN mkdir -p /root/.ansible/tmp /tmp/ansible \
     && chmod -R 1777 /tmp/ansible
 
 EXPOSE 22
-STOPSIGNAL SIGTERM
+STOPSIGNAL SIGRTMIN+3
 VOLUME ["/sys/fs/cgroup", "/run", "/tmp"]
 CMD ["/sbin/init"]
