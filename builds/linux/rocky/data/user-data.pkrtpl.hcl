@@ -10,7 +10,7 @@ users:
     gecos: "Packer"
     uid: 1010
     groups: [ wheel, adm, systemd-journal ]
-    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    sudo: "ALL=(ALL:ALL) NOPASSWD:ALL"
     shell: /bin/bash
     lock_passwd: false
 %{ if build_key != "" }
@@ -76,7 +76,7 @@ write_files:
 
 runcmd:
   # ensure wheel has passwordless sudo (some images have it already)
-  - [ bash, -lc, "echo '%wheel ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/99-wheel-nopasswd && chmod 440 /etc/sudoers.d/99-wheel-nopasswd" ]
+  - [ bash, -lc, "echo '%wheel ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/99-wheel-nopasswd && chmod 440 /etc/sudoers.d/99-wheel-nopasswd" ]
   # make sure cloud-init finished before packer tries ssh
   - [ systemctl, is-active, --quiet, cloud-init-local ]
   - [ systemctl, is-active, --quiet, cloud-init ]

@@ -6,7 +6,7 @@ users:
     uid: 1010
     groups: [adm, sudo]
     shell: /bin/bash
-    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    sudo: "ALL=(ALL:ALL) NOPASSWD:ALL"
     lock_passwd: false
 %{ if build_key != "" }
     ssh_authorized_keys:
@@ -42,7 +42,7 @@ write_files:
           gecos: Packer Build User
           groups: [adm, sudo]
           shell: /bin/bash
-          sudo: "ALL=(ALL) NOPASSWD:ALL"
+          sudo: "ALL=(ALL:ALL) NOPASSWD:ALL"
           lock_passwd: false
   - path: /etc/pul/security-tools.env
     permissions: '0600'
