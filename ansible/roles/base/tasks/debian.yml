@@ -1,7 +1,50 @@
 ---
-# Debian or derivative specific tasks.
+- name: Wait for cloud-init modules to complete
+  ansible.builtin.command: cloud-init status --wait
+  changed_when: false
+  failed_when: false
+  timeout: 1800
+  when: ansible_distribution == "Ubuntu"
 
-# Tasks for updating the operating system and installing additional packages.
+- name: Stop apt-daily services/timers during image build
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - apt-daily.service
+    - apt-daily.timer
+    - apt-daily-upgrade.service
+    - apt-daily-upgrade.timer
+    - unattended-upgrades.service
+  failed_when: false
+  when: ansible_os_family == "Debian"
+
+- name: Wait for any running apt/dpkg processes to complete
+  ansible.builtin.shell: |
+    timeout=300
+    while [ $timeout -gt 0 ]; do
+      if ! pgrep -x apt-get >/dev/null 2>&1 && \
+         ! pgrep -x dpkg >/dev/null 2>&1 && \
+         ! pgrep -x unattended-upgrade >/dev/null 2>&1; then
+        exit 0
+      fi
+      sleep 5
+      timeout=$((timeout - 5))
+    done
+    exit 1
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when: ansible_os_family == "Debian"
+
+- name: Ensure dpkg is configured (best-effort)
+  ansible.builtin.command: dpkg --configure -a
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "Debian"
+
 - name: Updating the operating system and installing additional packages.
   block:
     - name: Getting guest operating system information.
@@ -13,11 +56,19 @@
         name: "*"
         state: latest # noqa package-latest
         update_cache: true
+        lock_timeout: 1800
+      register: _apt_upgrade
+      retries: 5
+      delay: 15
 
     - name: Installing additional packages.
       ansible.builtin.apt:
         name: "{{ base_additional_packages[ansible_os_family] }}"
         state: latest # noqa package-latest
+        lock_timeout: 900
+      register: _apt_pkgs
+      retries: 5
+      delay: 15
 
     - name: Installing cloud-init.
       ansible.builtin.apt:
