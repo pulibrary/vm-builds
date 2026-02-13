@@ -38,6 +38,7 @@
     name: "{{ item }}"
     user: "{{ item }}"
     commands: ALL
+    nopassword: true
   loop:
     - "{{ build_username }}"
     - "{{ ansible_username }}"
@@ -50,14 +51,14 @@
 - name: Create group for pulsys
   ansible.builtin.group:
     name: pulsys
-    gid: 1000
+    gid: 1050
   when: pulsys_enabled
   tags: ['pulsys']
 
 - name: Create pulsys user
   ansible.builtin.user:
     name: pulsys
-    uid: 1000
+    uid: 1050
     group: pulsys
     groups: sudo
     shell: /bin/bash
@@ -91,6 +92,7 @@
     name: pulsys
     user: pulsys
     commands: ALL
+    nopassword: true
   when: pulsys_enabled
   tags: ['pulsys']
 
