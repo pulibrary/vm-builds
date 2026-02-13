@@ -1,5 +1,21 @@
 ---
 # Linux distribution specific tasks.
+- name: Ensure UID/GID allocation starts at desired minimum
+  when: users_manage_login_defs | bool
+  block:
+    - name: Set UID_MIN
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^\s*UID_MIN\s+'
+        line: "UID_MIN {{ users_uid_min }}"
+        backup: true
+
+    - name: Set GID_MIN
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^\s*GID_MIN\s+'
+        line: "GID_MIN {{ users_gid_min }}"
+        backup: true
 
 # Tasks for creating the local group for Ansible.
 - name: Creating the local group for Ansible.
@@ -32,12 +48,14 @@
       key: "{{ build_key }}"
   no_log: true
 
-# Tasks for managing sudoers.d for the local users.
 - name: Managing sudoers.d for the local users.
   community.general.sudoers:
     name: "{{ item }}"
     user: "{{ item }}"
+    runas: ALL
+    group: ALL
     commands: ALL
+    nopassword: true
   loop:
     - "{{ build_username }}"
     - "{{ ansible_username }}"
@@ -50,14 +68,14 @@
 - name: Create group for pulsys
   ansible.builtin.group:
     name: pulsys
-    gid: 1000
+    gid: "{{ pulsys_gid }}"
   when: pulsys_enabled
   tags: ['pulsys']
 
 - name: Create pulsys user
   ansible.builtin.user:
     name: pulsys
-    uid: 1000
+    uid: "{{ pulsys_uid }}"
     group: pulsys
     groups: sudo
     shell: /bin/bash
@@ -90,7 +108,13 @@
   community.general.sudoers:
     name: pulsys
     user: pulsys
+    host: ALL
+    runas: ALL
+    group: ALL
     commands: ALL
+    nopassword: true
+    state: present
+    validation: /usr/sbin/visudo -cf %s
   when: pulsys_enabled
   tags: ['pulsys']
 

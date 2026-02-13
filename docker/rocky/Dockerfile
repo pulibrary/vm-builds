@@ -17,7 +17,7 @@ RUN dnf -y update \
     && rm -rf /var/cache/dnf
 
 RUN useradd -m -s /bin/bash pulsys && \
-    echo "pulsys ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
+    echo "pulsys ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
     chmod 440 /etc/sudoers.d/99-pulsys
 
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd

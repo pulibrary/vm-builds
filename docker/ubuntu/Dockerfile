@@ -20,7 +20,7 @@ RUN apt-get update \
 
 # pulsys admin user
 RUN useradd -m -s /bin/bash pulsys && \
-    echo "pulsys ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
+    echo "pulsys ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
     chmod 440 /etc/sudoers.d/99-pulsys
 
 # Prepare systemd dirs

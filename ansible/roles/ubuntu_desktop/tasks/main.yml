@@ -6,7 +6,7 @@
 
 - name: Install Ubuntu desktop meta-package
   ansible.builtin.apt:
-    name: ubuntu-desktop
+    name: lubuntu-desktop
     state: present
 
 - name: Ensure default target is graphical
