@@ -1,6 +1,13 @@
 ---
 pulsys_enabled: true
 
+users_uid_min: 1051
+users_gid_min: 1051
+users_manage_login_defs: true
+
+pulsys_uid: 1050
+pulsys_gid: 1050
+
 pulsys_tower_key: >-
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP+lnexM16ZDOV113XlSHO2cgiGiO4bE3/IdFYkbv0RL
   pulsys@ansible-tower1.princeton.edu
