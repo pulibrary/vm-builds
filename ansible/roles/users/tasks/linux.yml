@@ -37,6 +37,8 @@
   community.general.sudoers:
     name: "{{ item }}"
     user: "{{ item }}"
+    runas: ALL
+    group: ALL
     commands: ALL
     nopassword: true
   loop:
@@ -91,6 +93,8 @@
   community.general.sudoers:
     name: pulsys
     user: pulsys
+    runas: ALL
+    group: ALL
     commands: ALL
     nopassword: true
   when: pulsys_enabled
