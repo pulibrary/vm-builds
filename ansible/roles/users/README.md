@@ -24,7 +24,7 @@ Variables are defined in `defaults/main.yml` and can be overridden in playbooks 
 
 ## Tags
 
-This role uses tags to allow for partial execution:
+This role uses tags to allow for partial execution during testing:
 
 * `pulsys`: Runs all tasks related to the `pulsys` user, including group creation, home directory setup, and sudoers configuration.
 
