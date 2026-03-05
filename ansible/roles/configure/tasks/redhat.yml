@@ -7,44 +7,65 @@
     state: absent
   when: ansible_distribution == 'RedHat'
 
-# Tasks for configuring SSH for public key authentication.
+# Tasks for configuring SSH for public key authentication without cloud-init.
 - name: Configuring SSH for Public Key Authentication without cloud-init.
-  when: enable_cloudinit == 'false'
+  when: not (enable_cloudinit | default(false) | bool)
   block:
-    - name: Disable root login
+    - name: Disable root login (no cloud-init)
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: ^PermitRootLogin
         line: PermitRootLogin no
-    - name: Enable public key authentication
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: ^PubkeyAuthentication
-        line: PubkeyAuthentication yes
+      register: ssh_no_cloudinit_root
 
-# Tasks for configuring SSH for public key authentication.
-- name: Configuring SSH for Public Key Authentication without cloud-init.
-  when: enable_cloudinit == 'true'
-  block:
-    - name: Disable root login
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: ^PermitRootLogin
-        line: PermitRootLogin no
-    - name: Enable public key authentication
+    - name: Enable public key authentication (no cloud-init)
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: ^PubkeyAuthentication
         line: PubkeyAuthentication yes
-    - name: Enable password authentication
+      register: ssh_no_cloudinit_pubkey
+
+# Tasks for configuring SSH with cloud-init.
+- name: Configuring SSH Authentication with cloud-init.
+  when: enable_cloudinit | default(false) | bool
+  block:
+    - name: Disable root login (with cloud-init)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: ^PermitRootLogin
+        line: PermitRootLogin no
+      register: ssh_cloudinit_root
+
+    - name: Enable public key authentication (with cloud-init)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: ^PubkeyAuthentication
+        line: PubkeyAuthentication yes
+      register: ssh_cloudinit_pubkey
+
+    - name: Enable password authentication (with cloud-init)
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: ^PasswordAuthentication
         line: PasswordAuthentication yes
+      register: ssh_cloudinit_pass
+
+# Task for restarting the SSH daemon
+- name: Restarting the SSH daemon.
+  ansible.builtin.systemd:
+    name: sshd
+    state: restarted
+    daemon_reload: true
+  when: >
+    (ssh_no_cloudinit_root.changed | default(false)) or
+    (ssh_no_cloudinit_pubkey.changed | default(false)) or
+    (ssh_cloudinit_root.changed | default(false)) or
+    (ssh_cloudinit_pubkey.changed | default(false)) or
+    (ssh_cloudinit_pass.changed | default(false))
 
 # Tasks for disabling cloud-init ssh module.
 - name: Disable cloud-init ssh module
-  when: enable_cloudinit == 'true'
+  when: enable_cloudinit | default(false) | bool
   ansible.builtin.lineinfile:
     path: /etc/cloud/cloud.cfg
     regexp: "^ssh_pwauth: false"
@@ -56,21 +77,15 @@
     name: localhost
 
 # Task for disabling SELinux.
+# Note: This modifies /etc/selinux/config. A system reboot is required to fully clear SELinux from memory.
 - name: Disabling SELinux.
   ansible.posix.selinux:
     state: disabled
     policy: targeted
 
-# Task for restarting the SSH daemon.
-- name: Restarting the SSH daemon.
-  ansible.builtin.systemd:
-    name: sshd
-    state: restarted
-    daemon_reload: true
-
 # Tasks for configuring cloud-init.
 - name: Configuring cloud-init.
-  when: enable_cloudinit == 'true'
+  when: enable_cloudinit | default(false) | bool
   block:
     - name: "Message: Configuring cloud-init"
       ansible.builtin.debug:
@@ -86,9 +101,9 @@
         dest: /etc/cloud/cloud.cfg.d/90_dpkg.cfg
         mode: "0644"
 
+# Prevent multiple rescue images from accumulating
 - name: Prevent multiple rescue images from accumulating
-  when:
-    - configure_prune_boot_rescue | bool
+  when: configure_prune_boot_rescue | bool
   block:
     - name: Ensure dnf post-transaction-actions plugin is present
       ansible.builtin.package:
