@@ -85,3 +85,42 @@
         content: "datasource_list: [ VMware, OVF, None ]"
         dest: /etc/cloud/cloud.cfg.d/90_dpkg.cfg
         mode: "0644"
+
+- name: Prevent multiple rescue images from accumulating
+  when:
+    - configure_prune_boot_rescue | bool
+  block:
+    - name: Ensure dnf post-transaction-actions plugin is present
+      ansible.builtin.package:
+        name: dnf-plugins-core
+        state: present
+
+    - name: Install /usr/local/sbin/boot-prune-rescue
+      ansible.builtin.copy:
+        src: boot-prune-rescue
+        dest: /usr/local/sbin/boot-prune-rescue
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure post-transaction-actions.d exists
+      ansible.builtin.file:
+        path: /etc/dnf/plugins/post-transaction-actions.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Add DNF post-transaction action to prune rescue images
+      ansible.builtin.copy:
+        dest: /etc/dnf/plugins/post-transaction-actions.d/boot-prune-rescue.action
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          kernel*:any:/usr/local/sbin/boot-prune-rescue
+          dracut*:any:/usr/local/sbin/boot-prune-rescue
+
+    - name: Prune any existing extra rescue images now
+      ansible.builtin.command: /usr/local/sbin/boot-prune-rescue
+      changed_when: false

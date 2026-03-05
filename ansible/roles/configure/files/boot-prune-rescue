@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /boot
+
+# Keep newest rescue initramfs; remove older ones + matching vmlinuz
+mapfile -t imgs < <(ls -1t initramfs-0-rescue-*.img 2>/dev/null || true)
+
+# nothing to do
+if [ "${#imgs[@]}" -le 1 ]; then
+  exit 0
+fi
+
+for img in "${imgs[@]:1}"; do
+  id="${img#initramfs-0-rescue-}"
+  id="${id%.img}"
+  rm -f "initramfs-0-rescue-${id}.img" "vmlinuz-0-rescue-${id}"
+done
+
+exit 0
