@@ -49,13 +49,14 @@
   no_log: true
 
 - name: Managing sudoers.d for the local users.
-  community.general.sudoers:
-    name: "{{ item }}"
-    user: "{{ item }}"
-    runas: ALL
-    group: ALL
-    commands: ALL
-    nopassword: true
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ item }}"
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      {{ item }} ALL=(ALL:ALL) NOPASSWD: ALL
+    validate: /usr/sbin/visudo -cf %s
   loop:
     - "{{ build_username }}"
     - "{{ ansible_username }}"
@@ -105,16 +106,14 @@
   tags: ['pulsys']
 
 - name: Add pulsys to sudoers.d
-  community.general.sudoers:
-    name: pulsys
-    user: pulsys
-    host: ALL
-    runas: ALL
-    group: ALL
-    commands: ALL
-    nopassword: true
-    state: present
-    validation: /usr/sbin/visudo -cf %s
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/pulsys
+    owner: root
+    group: root
+    mode: "0440"
+    content: |
+      pulsys ALL=(ALL:ALL) NOPASSWD: ALL
+    validate: /usr/sbin/visudo -cf %s
   when: pulsys_enabled
   tags: ['pulsys']
 
