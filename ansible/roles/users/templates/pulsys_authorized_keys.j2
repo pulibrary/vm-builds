@@ -18,3 +18,9 @@
 {{ lookup('ansible.builtin.url', url, split_lines=False) | trim }}
 {% endfor %}
 
+## cdh rse staff keys go on all machines
+# Keys for CDH RSE Staff
+{% for url in cdh_rse_github_keys | default([]) %}
+# Keys for {{ (url | regex_replace('^.*github\\.com/([^/]+)\\.keys$', '\\1')) }}
+{{ lookup('ansible.builtin.url', url, split_lines=False) | trim }}
+{% endfor %}
