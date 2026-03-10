@@ -59,3 +59,12 @@
     proto: tcp
     port: "52311"
   when: ansible_os_family == "Debian"
+
+# Mandatory CheckMK port
+- name: Allow CheckMK TCP/6556 (UFW)
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "6556"
+    src: "128.112.0.0/16"
+  when: ansible_os_family == "Debian"
