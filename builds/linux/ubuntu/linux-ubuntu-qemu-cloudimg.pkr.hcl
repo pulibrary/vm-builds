@@ -140,7 +140,7 @@ variable "vm_mem_size" {
 
 variable "vm_disk_size" {
   type        = number
-  default     = 30600
+  default     = 35840
   description = "Disk size (MB)."
 }
 
