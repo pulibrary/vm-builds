@@ -123,7 +123,7 @@ variable "vm_mem_size" {
 
 variable "vm_disk_size" {
   type    = number
-  default = 30720
+  default = 35840
 } // MB
 
 // Guest net/storage for templates (cloud-init will usually DHCP; names vary: ens3/enp1s0)
