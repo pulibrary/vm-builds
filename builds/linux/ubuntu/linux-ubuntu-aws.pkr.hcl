@@ -295,7 +295,7 @@ build {
     user                   = var.ssh_username
     galaxy_file            = "${abspath(path.root)}/../../../ansible/linux-requirements.yml"
     galaxy_force_with_deps = true
-    playbook_file          = "${abspath(path.root)}/../../../ansible/linux-playbook.yml"
+    playbook_file          = "${abspath(path.root)}/../../../ansible/linux-aws-playbook.yml"
     roles_path             = "${abspath(path.root)}/../../../ansible/roles"
     ansible_env_vars = [
       "ANSIBLE_CONFIG=${abspath(path.root)}/../../../ansible/ansible.cfg",
