@@ -52,6 +52,18 @@
     - 172.20.192.0/19
   when: ansible_os_family == "Debian"
 
+# Mandatory HTTP allows (libnet CIDRs)
+- name: Allow SSH from approved CIDRs (UFW)
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    port: "80"
+    src: "{{ item }}"
+  loop:
+    - 128.112.200.0/21
+    - 172.20.80.0/22
+  when: ansible_os_family == "Debian"
+
 # Mandatory BigFix port
 - name: Allow BigFix TCP/52311 (UFW)
   community.general.ufw:
