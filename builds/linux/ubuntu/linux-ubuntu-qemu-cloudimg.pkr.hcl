@@ -5,6 +5,7 @@
 
 packer {
   required_version = ">= 1.12.0"
+
   required_plugins {
     qemu = {
       source  = "github.com/hashicorp/qemu"
@@ -22,7 +23,7 @@ packer {
 }
 
 /////////////////////////////
-// Variables (separate these once successful?)     //
+// Variables
 /////////////////////////////
 
 // Naming / OS metadata
@@ -225,20 +226,22 @@ variable "vm_disk_lvm" {
   description = "Optional LVM layout."
 }
 
-// ova variables
-// gzip the qcow2 after build
+// Export toggles
 variable "compress_qcow2" {
   type    = bool
   default = false
 }
 
-// write a minimal OVF + .mf next to the VMDK
+variable "compress_vhd" {
+  type    = bool
+  default = false
+}
+
 variable "export_ovf" {
   type    = bool
   default = false
 }
 
-// tar OVF set into a single .ova
 variable "pack_ova" {
   type    = bool
   default = false
@@ -422,9 +425,8 @@ variable "CORTEX_XDR_DISTRIBUTION_SERVER" {
   default = env("CORTEX_XDR_DISTRIBUTION_SERVER")
 }
 
-
 ////////////////////
-// Data & Locals  //
+// Data & Locals
 ////////////////////
 
 data "git-repository" "cwd" {}
@@ -433,6 +435,7 @@ locals {
   build_by          = "Built by: HashiCorp Packer ${packer.version}"
   build_date        = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
   build_timestamp   = formatdate("YYYYMMDD-HHmmss", timestamp())
+  build_version     = local.build_timestamp
   build_description = "Built on: ${local.build_date}\n${local.build_by}"
 
   manifest_date   = formatdate("YYYY-MM-DD hh:mm:ss", timestamp())
@@ -445,7 +448,6 @@ locals {
   // Resolve local cloud image if iso_url not provided
   iso_url_effective = var.iso_url != "" ? var.iso_url : "file://${abspath(path.root)}/isos/${var.iso_filename}"
 
-  // ova
   qcow2_artifact = var.compress_qcow2 ? "${local.vm_name}.qcow2.gz" : "${local.vm_name}.qcow2"
 
   user_data_vars = {
@@ -484,7 +486,8 @@ locals {
   // cloud-init seed (NoCloud)
   data_source_content = {
     "/meta-data" = file("${abspath(path.root)}/data/meta-data")
-  "/user-data" = templatefile("${abspath(path.root)}/data/user-data.pkrtpl.hcl", local.user_data_vars) }
+    "/user-data" = templatefile("${abspath(path.root)}/data/user-data.pkrtpl.hcl", local.user_data_vars)
+  }
 
   // If we switch to HTTP seed instead of a seed disk:
   data_source_command = var.common_data_source == "http" ? "ds=\"nocloud-net;seedfrom=http://{{.HTTPIP}}:{{.HTTPPort}}/\"" : "ds=\"nocloud\""
@@ -508,7 +511,7 @@ source "qemu" "linux-ubuntu-cloudimg" {
   headless     = var.qemu_headless
   qemu_binary  = var.qemu_binary
   machine_type = var.qemu_machine_type
-  // firmware  = local.qemu_firmware // this is a mess because of arm and intel archs avoid these dragons
+  // firmware = local.qemu_firmware // this is a mess because of arm and intel archs avoid these dragons
 
   // Resources (Packer can resize a cloud image when disk_image=true)
   cpus           = var.vm_cpu_count
@@ -547,7 +550,7 @@ source "qemu" "linux-ubuntu-cloudimg" {
 }
 
 //////////////
-// Build     //
+// Build
 //////////////
 
 build {
@@ -560,10 +563,12 @@ build {
     galaxy_force_with_deps = true
     playbook_file          = "${abspath(path.root)}/../../../ansible/linux-playbook.yml"
     roles_path             = "${abspath(path.root)}/../../../ansible/roles"
+
     ansible_env_vars = [
       "ANSIBLE_CONFIG=${abspath(path.root)}/../../../ansible/ansible.cfg",
       "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES",
     ]
+
     extra_arguments = [
       "--extra-vars", "display_skipped_hosts=false",
       "--extra-vars", "build_username=${var.build_username}",
@@ -573,8 +578,23 @@ build {
       "--extra-vars", "enable_cloudinit=${var.vm_guest_os_cloudinit}",
       "--extra-vars", "cleanup_final_image=true",
       "--extra-vars", "prepare_security_firstboot=${var.prepare_security_firstboot}",
-      "--forks", "1"
+      "--forks", "1",
     ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "set -eu",
+      "# Prefer discard first for filesystems and virtual disks that support it.",
+      "sudo fstrim -av || true",
+      "# Then write zeros into free space on / so sparse exports stay smaller.",
+      "sudo rm -f /EMPTY",
+      "sudo dd if=/dev/zero of=/EMPTY bs=1M status=progress conv=fsync || true",
+      "sync",
+      "sudo rm -f /EMPTY",
+      "sync",
+    ]
+    execute_command = "echo '${var.build_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
 
   provisioner "shell" {
@@ -585,11 +605,11 @@ build {
     execute_command = "echo '${var.build_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
   }
 
-
   post-processor "manifest" {
     output     = local.manifest_output
     strip_path = true
     strip_time = true
+
     custom_data = {
       ansible_username         = var.ansible_username
       build_username           = var.build_username
@@ -612,7 +632,7 @@ build {
     }
   }
 
-  // Convert QCOW2 → VMDK/VHD
+  // Convert QCOW2 → VMDK/VHD (+ optional OVF/OVA)
   post-processor "shell-local" {
     inline = [<<-EOT
       set -euo pipefail
@@ -624,18 +644,26 @@ build {
       if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/*.img 2>/dev/null | head -n1 || true)"; fi
       if [ -z "$SRC" ]; then SRC="$(ls -1 "$D"/packer-* 2>/dev/null | head -n1 || true)"; fi
       if [ -z "$SRC" ]; then SRC="$(find "$D" -type f -size +100M -print0 | xargs -0 ls -1S 2>/dev/null | head -n1 || true)"; fi
-      if [ -z "$SRC" ]; then echo "Could not locate source disk image in $D" >&2; exit 1; fi
+      if [ -z "$SRC" ]; then
+        echo "Could not locate source disk image in $D" >&2
+        exit 1
+      fi
 
       qemu-img info "$SRC" || true
 
       # Convert to target formats for publishing
       qemu-img convert -p -O qcow2 "$SRC" "$D/$B.qcow2"
       qemu-img convert -p -O vmdk -o subformat=streamOptimized "$SRC" "$D/$B.vmdk"
-      qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
+      qemu-img convert -p -O vpc "$SRC" "$D/$B.vhd"
 
       # gzip qcow2 (after we've created it)
       if [ "${var.compress_qcow2}" = "true" ]; then
         gzip -f -9 "$D/$B.qcow2"
+      fi
+
+      # gzip vhd for transport (after we've created it)
+      if [ "${var.compress_vhd}" = "true" ]; then
+        gzip -f -9 "$D/$B.vhd"
       fi
 
       # OVF/OVA export
@@ -651,97 +679,97 @@ build {
         FILE_BYTES=$(stat -f%z "$VMDK" 2>/dev/null || stat -c%s "$VMDK")
 
         cat > "$OVF" <<'OVF'
-  <?xml version="1.0" encoding="UTF-8"?>
-  <ovf:Envelope
-    xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
-    xmlns:vmw="http://www.vmware.com/schema/ovf"
-    xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
-    xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
-    ovf:version="1.0">
+<?xml version="1.0" encoding="UTF-8"?>
+<ovf:Envelope
+  xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+  xmlns:vmw="http://www.vmware.com/schema/ovf"
+  xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
+  xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
+  ovf:version="1.0">
 
-    <ovf:References>
-      <ovf:File ovf:id="file1" ovf:href="__B__.vmdk" ovf:size="__FILE_BYTES__"/>
-    </ovf:References>
+  <ovf:References>
+    <ovf:File ovf:id="file1" ovf:href="__B__.vmdk" ovf:size="__FILE_BYTES__"/>
+  </ovf:References>
 
-    <ovf:NetworkSection>
-      <ovf:Info>Logical networks used in the package</ovf:Info>
-      <ovf:Network ovf:name="__NETWORK__"/>
-    </ovf:NetworkSection>
+  <ovf:NetworkSection>
+    <ovf:Info>Logical networks used in the package</ovf:Info>
+    <ovf:Network ovf:name="__NETWORK__"/>
+  </ovf:NetworkSection>
 
-    <ovf:DiskSection>
-      <ovf:Info>Virtual disk information</ovf:Info>
-      <ovf:Disk ovf:diskId="vmdisk1" ovf:fileRef="file1"
-                ovf:capacity="__DISK_BYTES__"
-                ovf:capacityAllocationUnits="byte"
-                ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
-    </ovf:DiskSection>
+  <ovf:DiskSection>
+    <ovf:Info>Virtual disk information</ovf:Info>
+    <ovf:Disk ovf:diskId="vmdisk1" ovf:fileRef="file1"
+              ovf:capacity="__DISK_BYTES__"
+              ovf:capacityAllocationUnits="byte"
+              ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
+  </ovf:DiskSection>
 
-    <ovf:VirtualSystem ovf:id="__B__">
-      <ovf:Info>__OS_NAME__ __OS_VER__</ovf:Info>
+  <ovf:VirtualSystem ovf:id="__B__">
+    <ovf:Info>__OS_NAME__ __OS_VER__</ovf:Info>
 
-      <ovf:OperatingSystemSection ovf:id="101" vmw:osType="__GUEST_ID__">
-        <ovf:Info>Guest OS type</ovf:Info>
-        <ovf:Description>__OS_DESC__</ovf:Description>
-      </ovf:OperatingSystemSection>
+    <ovf:OperatingSystemSection ovf:id="101" vmw:osType="__GUEST_ID__">
+      <ovf:Info>Guest OS type</ovf:Info>
+      <ovf:Description>__OS_DESC__</ovf:Description>
+    </ovf:OperatingSystemSection>
 
-      <ovf:VirtualHardwareSection>
-        <ovf:Info>Virtual hardware requirements</ovf:Info>
+    <ovf:VirtualHardwareSection>
+      <ovf:Info>Virtual hardware requirements</ovf:Info>
 
-        <ovf:System>
-            <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
-            <vssd:InstanceID>0</vssd:InstanceID>
-            <vssd:VirtualSystemIdentifier>__B__</vssd:VirtualSystemIdentifier>
-            <vssd:VirtualSystemType>vmx-14</vssd:VirtualSystemType>
-          </ovf:System>
+      <ovf:System>
+        <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
+        <vssd:InstanceID>0</vssd:InstanceID>
+        <vssd:VirtualSystemIdentifier>__B__</vssd:VirtualSystemIdentifier>
+        <vssd:VirtualSystemType>vmx-14</vssd:VirtualSystemType>
+      </ovf:System>
 
-        <ovf:Item>
-          <rasd:Description>Number of Virtual CPUs</rasd:Description>
-          <rasd:ElementName>__CPU__ virtual CPU(s)</rasd:ElementName>
-          <rasd:InstanceID>1</rasd:InstanceID>
-          <rasd:ResourceType>3</rasd:ResourceType>
-          <rasd:VirtualQuantity>__CPU__</rasd:VirtualQuantity>
-        </ovf:Item>
+      <ovf:Item>
+        <rasd:Description>Number of Virtual CPUs</rasd:Description>
+        <rasd:ElementName>__CPU__ virtual CPU(s)</rasd:ElementName>
+        <rasd:InstanceID>1</rasd:InstanceID>
+        <rasd:ResourceType>3</rasd:ResourceType>
+        <rasd:VirtualQuantity>__CPU__</rasd:VirtualQuantity>
+      </ovf:Item>
 
-        <ovf:Item>
-          <rasd:Description>Memory Size</rasd:Description>
-          <rasd:ElementName>__MEM__MB of memory</rasd:ElementName>
-          <rasd:InstanceID>2</rasd:InstanceID>
-          <rasd:ResourceType>4</rasd:ResourceType>
-          <rasd:VirtualQuantity>__MEM__</rasd:VirtualQuantity>
-          <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
-        </ovf:Item>
+      <ovf:Item>
+        <rasd:Description>Memory Size</rasd:Description>
+        <rasd:ElementName>__MEM__MB of memory</rasd:ElementName>
+        <rasd:InstanceID>2</rasd:InstanceID>
+        <rasd:ResourceType>4</rasd:ResourceType>
+        <rasd:VirtualQuantity>__MEM__</rasd:VirtualQuantity>
+        <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
+      </ovf:Item>
 
-        <ovf:Item>
-          <rasd:ElementName>SCSI Controller 0</rasd:ElementName>
-          <rasd:InstanceID>3</rasd:InstanceID>
-          <rasd:ResourceType>6</rasd:ResourceType>
-          <rasd:ResourceSubType>lsilogicsas</rasd:ResourceSubType>
-          <rasd:BusNumber>0</rasd:BusNumber>
-          <rasd:Address>0</rasd:Address>
-        </ovf:Item>
+      <ovf:Item>
+        <rasd:ElementName>SCSI Controller 0</rasd:ElementName>
+        <rasd:InstanceID>3</rasd:InstanceID>
+        <rasd:ResourceType>6</rasd:ResourceType>
+        <rasd:ResourceSubType>lsilogicsas</rasd:ResourceSubType>
+        <rasd:BusNumber>0</rasd:BusNumber>
+        <rasd:Address>0</rasd:Address>
+      </ovf:Item>
 
-        <ovf:Item>
-          <rasd:ElementName>Hard disk 1</rasd:ElementName>
-          <rasd:InstanceID>4</rasd:InstanceID>
-          <rasd:ResourceType>17</rasd:ResourceType>
-          <rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>
-          <rasd:Parent>3</rasd:Parent>
-          <rasd:AddressOnParent>0</rasd:AddressOnParent>
-        </ovf:Item>
+      <ovf:Item>
+        <rasd:ElementName>Hard disk 1</rasd:ElementName>
+        <rasd:InstanceID>4</rasd:InstanceID>
+        <rasd:ResourceType>17</rasd:ResourceType>
+        <rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>
+        <rasd:Parent>3</rasd:Parent>
+        <rasd:AddressOnParent>0</rasd:AddressOnParent>
+      </ovf:Item>
 
-        <ovf:Item>
-          <rasd:ElementName>Network adapter 1</rasd:ElementName>
-          <rasd:InstanceID>5</rasd:InstanceID>
-          <rasd:ResourceType>10</rasd:ResourceType>
-          <rasd:ResourceSubType>VMXNET3</rasd:ResourceSubType>
-          <rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>
-          <rasd:Connection>__NETWORK__</rasd:Connection>
-        </ovf:Item>
+      <ovf:Item>
+        <rasd:ElementName>Network adapter 1</rasd:ElementName>
+        <rasd:InstanceID>5</rasd:InstanceID>
+        <rasd:ResourceType>10</rasd:ResourceType>
+        <rasd:ResourceSubType>VMXNET3</rasd:ResourceSubType>
+        <rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>
+        <rasd:Connection>__NETWORK__</rasd:Connection>
+      </ovf:Item>
 
-      </ovf:VirtualHardwareSection>
-    </ovf:VirtualSystem>
-  </ovf:Envelope>
-  OVF
+    </ovf:VirtualHardwareSection>
+  </ovf:VirtualSystem>
+</ovf:Envelope>
+OVF
 
         # sed helper (BSD/GNU safe) + escaper
         _inplace_sed() { if sed --version >/dev/null 2>&1; then sed -i "$1" "$2"; else sed -i '' "$1" "$2"; fi; }
@@ -783,7 +811,7 @@ build {
   // Publish just the converted files (+ qcow2)
   post-processor "artifice" {
     files = [
-      "${local.output_dir}/${local.qcow2_artifact}", # .qcow2 or .qcow2.gz
+      "${local.output_dir}/${local.qcow2_artifact}",
       "${local.output_dir}/${local.vm_name}.vmdk",
       "${local.output_dir}/${local.vm_name}.vhd",
       # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
@@ -801,14 +829,16 @@ build {
     content {
       bucket_name = local.bucket_name
       description = local.bucket_description
+
       bucket_labels = {
-        "os_family"  = var.vm_guest_os_family,
-        "os_name"    = var.vm_guest_os_name,
-        "os_version" = var.vm_guest_os_version,
+        "os_family"  = var.vm_guest_os_family
+        "os_name"    = var.vm_guest_os_name
+        "os_version" = var.vm_guest_os_version
       }
+
       build_labels = {
-        "build_version"  = local.build_version,
-        "packer_version" = packer.version,
+        "build_version"  = local.build_version
+        "packer_version" = packer.version
       }
     }
   }
