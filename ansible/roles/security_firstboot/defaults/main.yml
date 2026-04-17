@@ -50,6 +50,7 @@ ssh_allowed_cidrs:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  - 172.24.0.0/19
   # REQUIRED FOR LOCAL/QEMU USER-NET (host->guest port forward shows as 10.0.2.2)
   - 10.0.2.0/24
 
