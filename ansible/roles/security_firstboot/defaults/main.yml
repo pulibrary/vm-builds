@@ -36,8 +36,13 @@ allowed_admin_cidrs:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  - 172.24.0.0/19
   # REQUIRED FOR LOCAL/QEMU USER-NET (host->guest port forward shows as 10.0.2.2)
   - 10.0.2.0/24
+
+allowed_libnet_cidrs:
+  - 128.112.200.0/21
+  - 172.20.80.0/22
 
 ssh_allowed_cidrs:
   - 10.249.64.0/18
@@ -46,6 +51,7 @@ ssh_allowed_cidrs:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  - 172.24.0.0/19
   # REQUIRED FOR LOCAL/QEMU USER-NET (host->guest port forward shows as 10.0.2.2)
   - 10.0.2.0/24
 
@@ -65,6 +71,7 @@ fail2ban_ignoreips:
   - 172.20.80.0/22
   - 172.20.95.0/24
   - 172.20.192.0/19
+  - 172.24.0.0/19
   #  REQUIRED FOR LOCAL/QEMU USER-NET
   - 10.0.2.0/24
 

@@ -33,6 +33,17 @@
   when: ansible_os_family == "RedHat"
   tags: ['firewall']
 
+- name: Allow HTTP from libnet
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item }}" port protocol="tcp" port="80" accept'
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ allowed_libnet_cidrs }}"
+  when: ansible_os_family == "RedHat"
+  tags: ['firewall']
+
 - name: Allow BigFix 52311/tcp when requested
   ansible.posix.firewalld:
     port: 52311/tcp
