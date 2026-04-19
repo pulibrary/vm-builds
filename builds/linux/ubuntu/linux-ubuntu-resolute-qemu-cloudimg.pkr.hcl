@@ -773,6 +773,9 @@ OVF
       "${local.output_dir}/${local.qcow2_artifact}",
       "${local.output_dir}/${local.vm_name}.vmdk",
       "${local.output_dir}/${local.vm_name}.vhd",
+      var.export_ovf ? "${local.output_dir}/${local.vm_name}.ovf" : "",
+      var.export_ovf ? "${local.output_dir}/${local.vm_name}.mf" : "",
+
     ]
   }
 
