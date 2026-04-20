@@ -11,8 +11,8 @@ RUN dnf -y update \
        openssh-server \
        net-tools \
        ca-certificates \
-       python3 \
-       python3-pip \
+       python3.12 \
+       python3.12-pip \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
@@ -23,9 +23,9 @@ RUN useradd -m -s /bin/bash pulsys && \
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
 # ansible-core 2.15.x works with Python 3.9
-RUN python3 -m pip install --upgrade pip \
-    && python3 -m pip install \
-         ansible-core==2.15.13 \
+RUN python3.12 -m pip install --upgrade pip \
+    && python3.12 -m pip install \
+         ansible-core==2.19.4 \
          pyopenssl
 
 COPY ansible/collections.yaml /tmp/collections.yaml

@@ -13,9 +13,19 @@ RUN apt-get update \
        openssh-server \
        net-tools \
        ca-certificates \
-       python3 \
-       python3-venv \
-       python3-pip \
+       curl \
+       gnupg2 \
+       software-properties-common
+
+# install python 3.12
+RUN add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y python3.12 python3.12-venv python3.12-dev \
+    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
+
+# Use the 3.12 binary for Ansible
+RUN python3.12 -m pip install --upgrade pip \
+    && python3.12 -m pip install ansible-core==2.19.4 pyopenssl \
     && rm -rf /var/lib/apt/lists/*
 
 # pulsys admin user
@@ -44,11 +54,6 @@ RUN systemctl disable systemd-networkd-wait-online.service
 RUN mkdir -p /etc/systemd/journald.conf.d && \
     echo -e "[Journal]\nStorage=volatile\nRuntimeMaxUse=8M" > /etc/systemd/journald.conf.d/volatile.conf
 
-# Ansible bits
-RUN python3 -m pip install --upgrade pip \
-    && python3 -m pip install \
-         ansible-core==2.16.3 \
-         pyopenssl
 
 COPY ansible/collections.yaml /tmp/collections.yaml
 RUN ansible-galaxy collection install -r /tmp/collections.yaml \
