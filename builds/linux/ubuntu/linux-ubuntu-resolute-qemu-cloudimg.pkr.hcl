@@ -54,7 +54,7 @@ variable "vm_guest_os_type" {
 // Firmware label for manifest only (qemu will use default unless we wire EFI vars)
 variable "vm_firmware" {
   type        = string
-  default     = "efi-secure"
+  default     = "efi"
   description = "Virtual firmware: 'efi', 'efi-secure', or 'bios'."
 }
 

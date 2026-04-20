@@ -22,6 +22,34 @@
         - /etc/cloud
         - /var/lib/cloud
 
+- name: Remove dracut on Ubuntu
+  ansible.builtin.apt:
+    name:
+      - dracut
+      - dracut-core
+      - dracut-install
+      - dracut-network
+    state: absent
+    purge: true
+  when: ansible_distribution_release == "resolute"
+
+- name: Ensure initramfs-tools is installed on Ubuntu
+  ansible.builtin.apt:
+    name:
+      - initramfs-tools
+      - initramfs-tools-core
+      - initramfs-tools-bin
+    state: present
+  when: ansible_distribution_release == "resolute"
+
+- name: Rebuild initramfs on Ubuntu
+  ansible.builtin.command: update-initramfs -u -k all
+  when: ansible_distribution_release == "resolute"
+
+- name: Rebuild grub config on Ubuntu
+  ansible.builtin.command: update-grub
+  when: ansible_distribution_release == "resolute"
+
 # Tasks to clean the audit logs.
 - name: Cleaning the audit logs.
   ansible.builtin.file:
