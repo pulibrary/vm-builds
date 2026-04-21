@@ -26,3 +26,13 @@ base_additional_packages:
     - unzip
     - vim
     - wget
+
+  FreeBSD:
+    - bash
+    - bash-completion
+    - ca_root_nss
+    - curl
+    - doas
+    - git
+    - unzip
+    - wget

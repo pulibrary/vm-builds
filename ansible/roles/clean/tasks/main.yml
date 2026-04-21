@@ -1,10 +1,10 @@
 ---
 - name: "{{ clean_task_name }}"
   ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
-  when: ansible_os_family in ['Debian', 'RedHat']
+  when: ansible_os_family in ['Debian', 'RedHat', 'FreeBSD']
 
 - name: "{{ clean_task_name }}"
   ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
   when:
-    - ansible_os_family in ['Debian', 'RedHat']
+    - ansible_os_family in ['Debian', 'RedHat', 'FreeBSD']
     - (cleanup_final_image | default(false) | bool)
