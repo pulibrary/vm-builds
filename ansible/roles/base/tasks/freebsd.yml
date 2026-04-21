@@ -1,0 +1,25 @@
+---
+- name: Getting guest operating system information.
+  ansible.builtin.debug:
+    msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Ensure pkg itself is current.
+  community.general.pkgng:
+    name: pkg
+    state: latest  # noqa package-latest
+
+- name: Updating the operating system (pkg upgrade).
+  community.general.pkgng:
+    name: "*"
+    state: latest  # noqa package-latest
+
+- name: Installing additional packages.
+  community.general.pkgng:
+    name: "{{ base_additional_packages['FreeBSD'] }}"
+    state: latest  # noqa package-latest
+
+- name: Installing cloud-init.
+  community.general.pkgng:
+    name: net/cloud-init
+    state: latest  # noqa package-latest
+  when: enable_cloudinit | default(false) | bool
