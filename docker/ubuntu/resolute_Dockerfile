@@ -49,12 +49,6 @@ RUN systemctl disable systemd-networkd-wait-online.service
 RUN mkdir -p /etc/systemd/journald.conf.d && \
     echo -e "[Journal]\nStorage=volatile\nRuntimeMaxUse=8M" > /etc/systemd/journald.conf.d/volatile.conf
 
-# Ansible bits
-RUN python3 -m pip install --upgrade pip \
-    && python3 -m pip install \
-         ansible-core==2.16.3 \
-         pyopenssl
-
 COPY ansible/collections.yaml /tmp/collections.yaml
 RUN ansible-galaxy collection install -r /tmp/collections.yaml \
     && rm -f /tmp/collections.yaml
