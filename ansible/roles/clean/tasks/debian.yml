@@ -22,7 +22,7 @@
         - /etc/cloud
         - /var/lib/cloud
 
-- name: Remove dracut on Ubuntu
+- name: Remove dracut on Ubuntu 26.04 'resolute raccoon'
   ansible.builtin.apt:
     name:
       - dracut
