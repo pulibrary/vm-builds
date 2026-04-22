@@ -9,6 +9,7 @@ ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
 rocky_qemu_tpl := "builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl"
 rocky_aws_tpl := "builds/linux/rocky/linux-rocky-aws.pkr.hcl"
+freebsd_gcp_tpl := "builds/bsd/freebsd/freebsd-15-gcp.pkr.hcl"
 
 
 ubuntu_cloudinit_user_data := "builds/linux/ubuntu/data/user-data.pkrtpl.hcl"
@@ -33,9 +34,8 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-ubuntu-qemu init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
-    @echo "PACKER: All templates initialized."
-
+init-freebsd-gcp:
+    packer init {{ freebsd_gcp_tpl }}
 
 # Ubuntu QEMU requires an iso_checksum
 validate-ubuntu-qemu iso_checksum: init-ubuntu-qemu
@@ -56,6 +56,26 @@ validate-ubuntu-aws: init-ubuntu-aws
 validate-ubuntu-gcp project_id='': init-ubuntu-gcp
     @echo "PACKER: Validating Ubuntu GCP template (project_id={{ project_id }})"
     [[ -n "{{ project_id }}" ]] && packer validate -var "gcp_project_id={{ project_id }}" {{ ubuntu_gcp_tpl }} || packer validate {{ ubuntu_gcp_tpl }}
+
+# FreeBSD GCP: require project id + subnetwork; allow zone/machine type/network overrides
+build-freebsd-gcp project_id zone='us-east1-b' machine_type='e2-standard-2' network='default' subnetwork='' network_tags='' debug='false':
+    just validate-freebsd-gcp {{ project_id }}
+    @echo "PACKER: Building FreeBSD GCP (project_id={{ project_id }}, zone={{ zone }}, type={{ machine_type }}, network={{ network }}, subnetwork={{ subnetwork }}, tags={{ network_tags }}, debug={{ debug }})"
+    [[ -n "{{ project_id }}" ]] || (echo "ERROR: project_id is required." >&2; exit 1)
+    [[ -n "{{ subnetwork }}" ]] || (echo "ERROR: subnetwork is required for custom-mode networks." >&2; exit 1)
+    TAGS_HCL=$(if [[ -n "{{ network_tags }}" ]]; then echo "[\"{{ network_tags }}\"]" | sed 's/,/","/g'; else echo "[]"; fi); \
+    [[ "{{ debug }}" == "true" ]] \
+      && env PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" -var "gcp_network={{ network }}" -var "gcp_subnetwork={{ subnetwork }}" -var "gcp_network_tags=$TAGS_HCL" {{ freebsd_gcp_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" -var "gcp_network={{ network }}" -var "gcp_subnetwork={{ subnetwork }}" -var "gcp_network_tags=$TAGS_HCL" {{ freebsd_gcp_tpl }}
+
+# FreeBSD GCP: require project id; allow zone/machine type override
+validate-freebsd-gcp project_id='': init-freebsd-gcp
+    @echo "PACKER: Validating FreeBSD GCP template (project_id={{ project_id }})"
+    if [[ -n "{{ project_id }}" ]]; then \
+      packer validate -var "gcp_project_id={{ project_id }}" {{ freebsd_gcp_tpl }}; \
+    else \
+      packer validate {{ freebsd_gcp_tpl }}; \
+    fi
 
 # Rocky QEMU requires an iso_checksum
 validate-rocky-qemu iso_checksum: init-rocky-qemu
