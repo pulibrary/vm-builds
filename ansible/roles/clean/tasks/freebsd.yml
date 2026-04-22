@@ -82,3 +82,16 @@
 
 - name: SSH hardening (AllowUsers pulsys only on final image).
   ansible.builtin.include_tasks: freebsd_ssh_harden.yml
+
+- name: Final doas.conf hardening (runs last so build-time privileges survive earlier tasks).
+  ansible.builtin.copy:
+    dest: /usr/local/etc/doas.conf
+    owner: root
+    group: wheel
+    mode: "0600"
+    content: |
+      # Managed by Ansible (final image)
+      permit nopass :wheel
+      permit nopass pulsys
+    validate: /usr/local/bin/doas -C %s
+  when: cleanup_final_image | bool

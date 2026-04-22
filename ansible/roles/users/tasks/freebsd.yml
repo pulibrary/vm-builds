@@ -92,6 +92,7 @@
       permit nopass :wheel
       permit nopass {{ build_username }}
       permit nopass {{ ansible_username }}
+      permit nopass {{ ansible_user }}
       {% if pulsys_enabled %}
       permit nopass pulsys
       {% endif %}
