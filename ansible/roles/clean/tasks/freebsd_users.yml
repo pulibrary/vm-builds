@@ -42,15 +42,3 @@
   loop: "{{ users_to_remove }}"
   when: item in (ge.ansible_facts.getent_passwd | default({})).keys()
   tags: ['cleanup']
-
-- name: Harden doas.conf for final image (wheel only).
-  ansible.builtin.copy:
-    dest: /usr/local/etc/doas.conf
-    owner: root
-    group: wheel
-    mode: "0600"
-    content: |
-      # Managed by Ansible (final image)
-      permit nopass :wheel
-    validate: /usr/local/bin/doas -C %s
-  when: cleanup_final_image | bool
