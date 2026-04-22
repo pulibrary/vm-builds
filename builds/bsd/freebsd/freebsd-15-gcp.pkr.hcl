@@ -98,7 +98,7 @@ variable "source_image_project_id" {
 
 variable "source_image_family" {
   type    = string
-  default = "freebsd-15-0-release-amd64"
+  default = "freebsd-15-0-amd64-zfs"
 }
 
 variable "source_image" {
@@ -152,6 +152,11 @@ variable "ssh_username" {
 variable "communicator_timeout" {
   type    = string
   default = "30m"
+}
+
+variable "gcp_network_tags" {
+  type    = list(string)
+  default = ["pul-gcdc-staging"]
 }
 
 // Users for provisioning (same shape as the QEMU/AWS builds)
@@ -257,11 +262,10 @@ locals {
   image_family = "${var.vm_guest_os_family}-${replace(var.vm_guest_os_version, ".", "-")}"
 
   common_labels = {
-    os_family  = var.vm_guest_os_family
-    os_name    = var.vm_guest_os_name
-    os_version = replace(var.vm_guest_os_version, ".", "-")
-    build_date = replace(replace(local.build_date, " ", "-"), ":", "-")
-    build_hash = local.build_hash_full
+    os_family  = lower(var.vm_guest_os_family)
+    os_name    = lower(var.vm_guest_os_name)
+    os_version = lower(replace(var.vm_guest_os_version, ".", "-"))
+    build_date = local.build_timestamp
   }
 }
 
@@ -307,6 +311,9 @@ source "googlecompute" "freebsd-gcp-image" {
 
   # Labels on the build instance itself
   labels = local.common_labels
+
+  # ssh firewall
+  tags = var.gcp_network_tags
 
   # Minimal metadata: set the hostname for the build instance.
   metadata = {
