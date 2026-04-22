@@ -61,5 +61,5 @@ RUN mkdir -p /etc/systemd/journald.conf.d && \
 
 EXPOSE 22
 STOPSIGNAL SIGRTMIN+3
-VOLUME ["/sys/fs/cgroup", "/run", "/tmp"]
+VOLUME ["/sys/fs/cgroup", "/run"]
 CMD ["/sbin/init"]
