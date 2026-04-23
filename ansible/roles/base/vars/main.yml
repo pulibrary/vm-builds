@@ -10,6 +10,7 @@ base_additional_packages:
     - curl
     - git
     - net-tools
+    - open-vm-tools
     - unzip
     - wget
 
@@ -18,7 +19,10 @@ base_additional_packages:
     - ca-certificates
     - curl
     - git
+    - kernel-devel
+    - kernel-headers
     - net-tools
+    - open-vm-tools
     - unzip
     - vim
     - wget
