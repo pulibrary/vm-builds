@@ -40,8 +40,8 @@ variable "vm_guest_os_name" {
 
 variable "vm_guest_os_version" {
   type        = string
-  default     = "22.04-lts"
-  description = "OS version string for naming (e.g., 22.04-lts)."
+  default     = "24.04-lts"
+  description = "OS version string for naming (e.g., 24.04-lts)."
 }
 
 variable "vm_guest_os_type" {
@@ -60,19 +60,19 @@ variable "vm_firmware" {
 // Cloud image "url" (still named iso_* to match builder inputs)
 variable "iso_filename" {
   type        = string
-  default     = "ubuntu-22.04-server-cloudimg-amd64.img"
+  default     = "noble-server-cloudimg-amd64.img"
   description = "Default local image under ./isos when iso_url not provided."
 }
 
 variable "iso_url" {
   type        = string
-  default     = ""
+  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
   description = "file:///... or https://... to a cloud image (QCOW2). Leave empty to use ./isos/<iso_filename>."
 }
 
 variable "iso_checksum" {
   type        = string
-  default     = "sha256:CHANGE_ME"
+  default     = "sha256:6e7016f2c9f4d3c00f48789eb6b9043ba2172ccc1b6b1eaf3ed1e29dd3e52bb3"
   description = "Checksum for the cloud image (e.g., sha256:...). See Ubuntu release checksums."
 }
 
@@ -134,7 +134,7 @@ variable "vm_cpu_cores" {
 
 variable "vm_mem_size" {
   type        = number
-  default     = 2048
+  default     = 8192
   description = "RAM (MB)."
 }
 
