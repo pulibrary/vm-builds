@@ -25,9 +25,10 @@
 # Task for disabling systemd-tmpfiles.
 - name: Disabling systemd-tmpfiles.
   ansible.builtin.replace:
-    path: /usr/lib/tmpfiles.d/tmp.conf
-    regexp: ^D
-    replace: "#D"
+     path: /usr/lib/tmpfiles.d/tmp.conf
+     regexp: ^D
+     replace: "#D"
+  when: ansible_distribution_release != 'resolute'
 
 # Tasks for configuring cloud-init.
 - name: Configuring cloud-init.
