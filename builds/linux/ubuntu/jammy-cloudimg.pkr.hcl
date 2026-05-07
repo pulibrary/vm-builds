@@ -134,7 +134,7 @@ variable "vm_cpu_cores" {
 
 variable "vm_mem_size" {
   type        = number
-  default     = 2048
+  default     = 8192
   description = "RAM (MB)."
 }
 

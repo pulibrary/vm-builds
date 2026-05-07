@@ -62,12 +62,11 @@ Download [Ubuntu Cloud Image](https://cloud-images.ubuntu.com/releases/) ISO and
 ### VM Images
 
 ```bash
-# Ubuntu QEMU (requires the cloud-image checksum)
-# Example checksum shown; replace with the current release checksum
-just build-ubuntu-qemu 'sha256:b119a978dcb66194761674c23a860a75cdb7778e95e222b51d7a3386dfe3c920' true
+# Ubuntu QEMU
+just build-jammy
 
-# Rocky QEMU (also requires checksum)
-just build-rocky-qemu 'sha256:<rocky_cloud_image_sha256_here>'
+# Rocky QEMU (requires checksum)
+just build-rocky'sha256:<rocky_cloud_image_sha256_here>'
 
 # Ubuntu AWS AMI
 just build-ubuntu-aws

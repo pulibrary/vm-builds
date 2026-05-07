@@ -88,7 +88,7 @@ validate-cloudinit: validate-cloudinit-ubuntu validate-cloudinit-rocky
 # Builds 
 
 # Ubuntu QEMU: requires iso_checksum; optionally export OVF (export_ovf=true) and toggle debug
-build-noble export_ovf='true' debug='false' VARS='':
+build-jammy export_ovf='true' debug='false' VARS='':
     @echo "PACKER: Building Ubuntu QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
       && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ jammy_tpl }} \
