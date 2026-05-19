@@ -1,0 +1,131 @@
+---
+# FreeBSD-specific user management. doas replaces sudo.
+
+- name: Creating the local group for Ansible.
+  ansible.builtin.group:
+    name: "{{ ansible_username }}"
+
+- name: Ensure the wheel group exists.
+  ansible.builtin.group:
+    name: wheel
+
+- name: Creating the local user for Ansible.
+  ansible.builtin.user:
+    name: "{{ ansible_username }}"
+    group: "{{ ansible_username }}"
+    groups: wheel
+    password: "!"
+    shell: /usr/local/bin/bash
+    create_home: true
+
+- name: Creating the local user for the builder.
+  ansible.builtin.user:
+    name: "{{ build_username }}"
+    groups: wheel
+    password: "!"
+    shell: /usr/local/bin/bash
+    create_home: true
+
+- name: Managing the authorized keys for the local users.
+  ansible.posix.authorized_key:
+    user: "{{ item.user }}"
+    key: "{{ item.key }}"
+  loop:
+    - user: "{{ ansible_username }}"
+      key: "{{ ansible_key }}"
+    - user: "{{ build_username }}"
+      key: "{{ build_key }}"
+  no_log: true
+
+- name: Ensure doas is installed.
+  community.general.pkgng:
+    name: doas
+    state: present
+
+- name: Create group for pulsys.
+  ansible.builtin.group:
+    name: pulsys
+    gid: "{{ pulsys_gid }}"
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Create pulsys user.
+  ansible.builtin.user:
+    name: pulsys
+    uid: "{{ pulsys_uid }}"
+    group: pulsys
+    groups: wheel
+    shell: /usr/local/bin/bash
+    password: "!"
+    create_home: true
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Ensure ~pulsys/.ssh exists.
+  ansible.builtin.file:
+    path: /home/pulsys/.ssh
+    state: directory
+    owner: pulsys
+    group: pulsys
+    mode: '0700'
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Install pulsys authorized_keys from dynamic GitHub lists.
+  ansible.builtin.template:
+    src: pulsys_authorized_keys.j2
+    dest: /home/pulsys/.ssh/authorized_keys
+    owner: pulsys
+    group: pulsys
+    mode: '0600'
+  when: pulsys_enabled
+  tags: ['pulsys']
+
+- name: Configure doas.conf (provisioning phase).
+  ansible.builtin.copy:
+    dest: /usr/local/etc/doas.conf
+    owner: root
+    group: wheel
+    mode: "0600"
+    content: |
+      # Managed by Ansible (provisioning)
+      permit nopass :wheel
+      permit nopass {{ build_username }}
+      permit nopass {{ ansible_username }}
+      permit nopass {{ ansible_user }}
+      {% if pulsys_enabled %}
+      permit nopass pulsys
+      {% endif %}
+    validate: /usr/local/bin/doas -C %s
+  tags: ['pulsys']
+
+# SSH service name fact (mirrors what linux.yml sets for its handler).
+- name: Determine SSH service name.
+  ansible.builtin.set_fact:
+    ssh_service_name: sshd
+
+- name: Remove any existing AllowUsers lines (provisioning phase).
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*AllowUsers\b.*$'
+    replace: ''
+    backup: yes
+  when: not (cleanup_final_image | bool)
+  notify: Restart SSH
+
+- name: Ensure global AllowUsers permits pulsys and {{ ansible_user }} (provisioning phase).
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    insertbefore: '^Match\b'
+    marker: '# {mark} managed by Ansible (provisioning AllowUsers)'
+    block: |
+      AllowUsers pulsys {{ ansible_user }}
+  when: not (cleanup_final_image | bool)
+  notify: Restart SSH
+
+- name: Validate sshd configuration (provisioning phase).
+  ansible.builtin.command: /usr/sbin/sshd -t -f /etc/ssh/sshd_config
+  register: sshd_check_build
+  changed_when: false
+  failed_when: sshd_check_build.rc != 0
+  when: not (cleanup_final_image | bool)

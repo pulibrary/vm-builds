@@ -1,0 +1,61 @@
+---
+
+- name: Configuring SSH for Public Key Authentication.
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PubkeyAuthentication'
+    line: PubkeyAuthentication yes
+  register: ssh_freebsd_pubkey
+
+- name: Disable root login.
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: PermitRootLogin no
+  register: ssh_freebsd_root
+
+- name: Restarting the SSH daemon.
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  when:
+    - (ssh_freebsd_pubkey.changed | default(false)) or (ssh_freebsd_root.changed | default(false))
+
+- name: Ensure sshd is enabled in rc.conf.
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^sshd_enable='
+    line: 'sshd_enable="YES"'
+    create: true
+    mode: "0644"
+
+- name: Setting the hostname.
+  ansible.builtin.hostname:
+    name: localhost
+
+- name: Persist hostname in rc.conf.
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^hostname='
+    line: 'hostname="localhost"'
+
+- name: Configuring cloud-init.
+  when: enable_cloudinit | default(false) | bool
+  block:
+    - name: "Message: Configuring cloud-init"
+      ansible.builtin.debug:
+        msg: Configuring cloud-init
+
+    - name: Ensure cloud-init is enabled in rc.conf.
+      ansible.builtin.lineinfile:
+        path: /etc/rc.conf
+        regexp: '^cloudinit_enable='
+        line: 'cloudinit_enable="YES"'
+
+    - name: Pin GCE datasource for cloud-init.
+      ansible.builtin.copy:
+        content: "datasource_list: [ GCE, None ]\n"
+        dest: /usr/local/etc/cloud/cloud.cfg.d/90_gce.cfg
+        owner: root
+        group: wheel
+        mode: "0644"

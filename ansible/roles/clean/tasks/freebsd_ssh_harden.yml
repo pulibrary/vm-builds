@@ -1,0 +1,31 @@
+---
+- name: Remove provisioning AllowUsers block from sshd_config.
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: '# {mark} managed by Ansible (provisioning AllowUsers)'
+    state: absent
+  when: cleanup_final_image | bool
+
+- name: Set final AllowUsers to pulsys only.
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: '# {mark} managed by Ansible (final AllowUsers)'
+    insertbefore: '^Match\b'
+    block: |
+      AllowUsers pulsys
+  when: cleanup_final_image | bool
+
+- name: Check if any ssh host keys exist.
+  ansible.builtin.find:
+    paths: /etc/ssh
+    patterns: "ssh_host_*"
+    file_type: file
+  register: _ssh_keys_after_cleanup
+  when: cleanup_final_image | bool
+
+- name: Validate sshd configuration (only when keys exist).
+  ansible.builtin.command: /usr/sbin/sshd -t -f /etc/ssh/sshd_config
+  changed_when: false
+  when:
+    - cleanup_final_image | bool
+    - (_ssh_keys_after_cleanup.matched | default(0) | int) > 0

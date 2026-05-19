@@ -1,0 +1,97 @@
+---
+
+- name: Disable cloud-init in rc.conf when not desired.
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^cloudinit_enable='
+    line: 'cloudinit_enable="NO"'
+  when: not (enable_cloudinit | bool)
+
+- name: Cleaning the audit/system logs.
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /var/log/auth.log
+    - /var/log/cron
+    - /var/log/debug.log
+    - /var/log/lastlog
+    - /var/log/maillog
+    - /var/log/messages
+    - /var/log/security
+    - /var/log/userlog
+    - /var/log/utx.lastlogin
+    - /var/log/utx.log
+    - /var/log/wtmp
+    - /var/log/xferlog
+
+- name: Finding the /tmp directories.
+  ansible.builtin.find:
+    paths:
+      - /tmp
+      - /var/tmp
+    file_type: any
+  register: find_tmp_directories
+
+- name: Cleaning the /tmp directories.
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ find_tmp_directories.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Finding the SSH host keys.
+  ansible.builtin.find:
+    paths: /etc/ssh
+    patterns: ssh_host_*
+  register: find_ssh_host_keys
+
+- name: Cleaning the SSH host keys.
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ find_ssh_host_keys.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Check if /etc/machine-id exists.
+  ansible.builtin.stat:
+    path: /etc/machine-id
+  register: _machine_id
+
+- name: Empty /etc/machine-id if present.
+  ansible.builtin.copy:
+    dest: /etc/machine-id
+    content: ""
+    mode: "0444"
+  when: _machine_id.stat.exists
+
+- name: Cleaning shell history.
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ ansible_env.HOME }}/.bash_history"
+    - "{{ ansible_env.HOME }}/.sh_history"
+    - /root/.bash_history
+    - /root/.sh_history
+
+- name: Cleanup builder/cloud-init users (FreeBSD family).
+  ansible.builtin.include_tasks: freebsd_users.yml
+
+- name: SSH hardening (AllowUsers pulsys only on final image).
+  ansible.builtin.include_tasks: freebsd_ssh_harden.yml
+
+- name: Final doas.conf hardening (runs last so build-time privileges survive earlier tasks).
+  ansible.builtin.copy:
+    dest: /usr/local/etc/doas.conf
+    owner: root
+    group: wheel
+    mode: "0600"
+    content: |
+      # Managed by Ansible (final image)
+      permit nopass :wheel
+      permit nopass pulsys
+    validate: /usr/local/bin/doas -C %s
+  when: cleanup_final_image | bool

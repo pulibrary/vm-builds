@@ -1,0 +1,19 @@
+---
+- name: Playbook for FreeBSD on GCP
+  become: true
+  become_method: community.general.doas
+  debugger: never
+  gather_facts: true
+  hosts: all
+  vars:
+    enable_cloudinit: false
+    ansible_python_interpreter: /usr/local/bin/python3
+    users_manage_login_defs: false
+    users_remove_known_defaults:
+      - freebsd
+      - packer
+  roles:
+    - role: base
+    - role: users
+    - role: configure
+    - role: clean
