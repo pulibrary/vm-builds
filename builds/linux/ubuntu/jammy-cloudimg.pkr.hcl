@@ -60,19 +60,19 @@ variable "vm_firmware" {
 // Cloud image "url" (still named iso_* to match builder inputs)
 variable "iso_filename" {
   type        = string
-  default     = "ubuntu-22.04-server-cloudimg-amd64.img"
+  default     = "jammy-server-cloudimg-amd64.img"
   description = "Default local image under ./isos when iso_url not provided."
 }
 
 variable "iso_url" {
   type        = string
-  default     = ""
+  default     = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
   description = "file:///... or https://... to a cloud image (QCOW2). Leave empty to use ./isos/<iso_filename>."
 }
 
 variable "iso_checksum" {
   type        = string
-  default     = "sha256:CHANGE_ME"
+  default     = "sha256:ea85b16f81b3f6aa53a1260912d3f991fc33e0e0fc1d73f0b8c9c96247e42fdb"
   description = "Checksum for the cloud image (e.g., sha256:...). See Ubuntu release checksums."
 }
 
@@ -134,7 +134,7 @@ variable "vm_cpu_cores" {
 
 variable "vm_mem_size" {
   type        = number
-  default     = 2048
+  default     = 8192
   description = "RAM (MB)."
 }
 

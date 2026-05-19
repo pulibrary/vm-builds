@@ -3,7 +3,8 @@
 set dotenv-load := true
 set shell := ["bash", "-c"]
 
-ubuntu_qemu_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-cloudimg.pkr.hcl"
+jammy_tpl := "builds/linux/ubuntu/jammy-cloudimg.pkr.hcl"
+noble_tpl := "builds/linux/ubuntu/noble-cloudimg.pkr.hcl"
 ubuntu_qemu_desktop_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-desktop-cloudimg.pkr.hcl"
 ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
@@ -15,8 +16,10 @@ ubuntu_cloudinit_user_data := "builds/linux/ubuntu/data/user-data.pkrtpl.hcl"
 rocky_cloudinit_user_data := "builds/linux/rocky/data/user-data.pkrtpl.hcl"
 
 # Initialize
-init-ubuntu-qemu:
-    packer init {{ ubuntu_qemu_tpl }}
+init-jammy:
+    packer init {{ jammy_tpl }}
+init-noble:
+    packer init {{ noble_tpl }}
 
 init-ubuntu-qemu-desktop:
     packer init {{ ubuntu_qemu_desktop_tpl }}
@@ -33,16 +36,10 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-ubuntu-qemu init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
+init-all: init-jammy init-noble init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
     @echo "PACKER: All templates initialized."
 
-
 # Ubuntu QEMU requires an iso_checksum
-validate-ubuntu-qemu iso_checksum: init-ubuntu-qemu
-    @echo "PACKER: Validating Ubuntu QEMU template"
-    [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Ubuntu (e.g. sha256:...)" >&2; exit 1)
-    packer validate -var "iso_checksum={{ iso_checksum }}" {{ ubuntu_qemu_tpl }}
-
 validate-ubuntu-qemu-desktop iso_checksum: init-ubuntu-qemu-desktop
     @echo "PACKER: Validating Ubuntu QEMU DESKTOP template"
     [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Ubuntu Desktop (e.g. sha256:...)" >&2; exit 1)
@@ -69,7 +66,6 @@ validate-rocky-aws: init-rocky-aws
 
 # For validate-all, require you to provide both checksums explicitly
 validate-all ubuntu_iso_checksum rocky_iso_checksum:
-    just validate-ubuntu-qemu {{ ubuntu_iso_checksum }}
     just validate-ubuntu-qemu-desktop {{ ubuntu_iso_checksum }}
     just validate-rocky-qemu {{ rocky_iso_checksum }}
     just validate-ubuntu-aws
@@ -92,12 +88,17 @@ validate-cloudinit: validate-cloudinit-ubuntu validate-cloudinit-rocky
 # Builds 
 
 # Ubuntu QEMU: requires iso_checksum; optionally export OVF (export_ovf=true) and toggle debug
-build-ubuntu-qemu iso_checksum export_ovf='false' debug='false' VARS='':
-    just validate-ubuntu-qemu {{ iso_checksum }}
+build-jammy export_ovf='true' debug='false' VARS='':
     @echo "PACKER: Building Ubuntu QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }} \
-      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ jammy_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ jammy_tpl }}
+
+build-noble export_ovf='true' debug='false' VARS='':
+    @echo "PACKER: Building Ubuntu QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
+    [[ "{{ debug }}" == "true" ]] \
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ noble_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ noble_tpl }}
 
 build-ubuntu-qemu-desktop iso_checksum export_ovf='false' debug='false' VARS='':
     just validate-ubuntu-qemu-desktop {{ iso_checksum }}
@@ -138,23 +139,11 @@ build-ubuntu-gcp project_id zone='us-east1-b' machine_type='e2-standard-2' debug
       && env PACKER_LOG=1 packer build -debug -force -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "gcp_project_id={{ project_id }}" -var "gcp_zone={{ zone }}" -var "gcp_machine_type={{ machine_type }}" {{ ubuntu_gcp_tpl }}
 
-# Convenience bundles
-build-all-qemu ubuntu_iso_checksum rocky_iso_checksum:
-    just build-ubuntu-qemu {{ ubuntu_iso_checksum }}
-    just build-ubuntu-qemu-desktop {{ ubuntu_iso_checksum }}
-    just build-rocky-qemu {{ rocky_iso_checksum }}
-    @echo "PACKER: All QEMU builds complete."
-
 build-all-cloud project_id ubuntu_iso_checksum rocky_iso_checksum:
     just build-ubuntu-aws
     just build-rocky-aws
     just build-ubuntu-gcp {{ project_id }}
     @echo "PACKER: All cloud builds (AWS+GCP) complete."
-
-build-everything project_id ubuntu_iso_checksum rocky_iso_checksum:
-    just build-all-qemu {{ ubuntu_iso_checksum }} {{ rocky_iso_checksum }}
-    just build-all-cloud {{ project_id }} {{ ubuntu_iso_checksum }} {{ rocky_iso_checksum }}
-    @echo "PACKER: Everything built."
 
 # All images are tagged into GitHub Container Registry under this namespace
 DOCKER_NAMESPACE := "ghcr.io/pulibrary/vm-builds"
