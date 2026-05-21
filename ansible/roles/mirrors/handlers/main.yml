@@ -2,3 +2,9 @@
 - name: apt update
   ansible.builtin.apt:
     update_cache: true
+
+- name: dnf clean
+  ansible.builtin.command:
+    cmd: dnf clean all
+  when: ansible_pkg_mgr == 'dnf'
+  changed_when: true

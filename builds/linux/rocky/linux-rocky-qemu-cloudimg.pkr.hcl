@@ -61,12 +61,12 @@ variable "iso_filename" {
 
 variable "iso_url" {
   type    = string
-  default = ""
+  default = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
 }
 
 variable "iso_checksum" {
   type    = string
-  default = "sha256:CHANGE_ME"
+  default = "sha256:15d81d3434b298142b2fdd8fb54aef2662684db5c082cc191c3c79762ed6360c"
 }
 
 // QEMU knobs
