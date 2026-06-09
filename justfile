@@ -77,11 +77,6 @@ validate-freebsd-gcp project_id='': init-freebsd-gcp
       packer validate {{ freebsd_gcp_tpl }}; \
     fi
 
-# Rocky QEMU requires an iso_checksum
-validate-rocky-qemu iso_checksum: init-rocky-qemu
-    @echo "PACKER: Validating Rocky QEMU template"
-    [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Rocky (e.g. sha256:...)" >&2; exit 1)
-    packer validate -var "iso_checksum={{ iso_checksum }}" {{ rocky_qemu_tpl }}
 
 validate-rocky-aws: init-rocky-aws
     @echo "PACKER: Validating Rocky AWS template"
@@ -130,12 +125,11 @@ build-ubuntu-qemu-desktop iso_checksum export_ovf='false' debug='false' VARS='':
       && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }}
 
-build-rocky-qemu iso_checksum export_ovf='false' debug='false' VARS='':
-    just validate-rocky-qemu {{ iso_checksum }}
-    @echo "PACKER: Building Rocky QEMU (debug={{ debug }})"
+build-rocky-qemu export_ovf='true' debug='false' VARS='':
+    @echo "PACKER: Building Rocky QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }}  {{ rocky_qemu_tpl }} \
-      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ rocky_qemu_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }}  {{ rocky_qemu_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ rocky_qemu_tpl }}
 
 # Ubuntu AWS
 build-ubuntu-aws debug='false':

@@ -8,32 +8,31 @@
   ansible.builtin.set_fact:
     ubuntu_codename: "{{ ansible_distribution_release | default(ansible_lsb.codename) }}"
 
-# Put Princeton first for archive/updates/backports (correct base path!)
-- name: Add Princeton mirror (archive/updates/backports)
+# Comment out ALL stock pocket lines in the default sources.list.
+# We re-add archive/updates/backports pointing at pulmirror, and
+# -security pointing at Canonical, via dedicated files in sources.list.d/.
+# Doing this unconditionally avoids the "configured multiple times"
+# warnings that appear when the stock lines coexist with our drop-ins.
+- name: Comment stock Ubuntu pocket lines in /etc/apt/sources.list
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb\s+(?:http|https)://(?:archive|security)\.ubuntu\.com/ubuntu\s+{{ ubuntu_codename }}(?:-\w+)?\s+.*)$'
+    replace: '# \1'
+  notify: apt update
+
+# pulmirror for archive/updates/backports
+- name: Add PUL mirror (archive/updates/backports)
   ansible.builtin.apt_repository:
-    repo: "deb https://mirror.math.princeton.edu/pub/ubuntu {{ item }} main restricted universe multiverse"
+    repo: "deb https://{{ pul_mirror_host }}/mirror/ubuntu {{ item }} main restricted universe multiverse"
     state: present
-    filename: "00-princeton"
+    filename: "00-pulmirror"
     update_cache: no
   loop:
     - "{{ ubuntu_codename }}"
     - "{{ ubuntu_codename }}-updates"
     - "{{ ubuntu_codename }}-backports"
 
-- name: Check if 10-security.list exists
-  ansible.builtin.stat:
-    path: /etc/apt/sources.list.d/10-security.list
-  register: sec_list
-
-- name: Comment duplicate -security lines in /etc/apt/sources.list
-  ansible.builtin.replace:
-    path: /etc/apt/sources.list
-    regexp: '^(deb\s+.*\b{{ ubuntu_codename }}-security\b.*)$'
-    replace: '# \1'
-  when: sec_list.stat.exists
-  notify: apt update
-
-# Keep security on Canonical
+# Security stays on Canonical
 - name: Ensure default security repo is present
   ansible.builtin.apt_repository:
     repo: "deb http://security.ubuntu.com/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
@@ -41,14 +40,14 @@
     filename: "10-security"
     update_cache: no
 
-# Soft-prefer Princeton without breaking fallbacks
-- name: Pin Princeton mirror slightly higher than defaults
+# Soft-prefer the PUL mirror without breaking fallbacks
+- name: Pin PUL mirror slightly higher than defaults
   ansible.builtin.copy:
-    dest: /etc/apt/preferences.d/99-princeton.pref
+    dest: /etc/apt/preferences.d/99-pulmirror.pref
     mode: "0644"
     content: |
       Package: *
-      Pin: origin "mirror.math.princeton.edu"
+      Pin: origin "{{ pul_mirror_host }}"
       Pin-Priority: 600
 
 - name: apt update (with retries)
