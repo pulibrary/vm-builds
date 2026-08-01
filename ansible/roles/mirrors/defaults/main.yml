@@ -1,3 +1,13 @@
 ---
 pul_mirror_host: pulmirror.princeton.edu
 
+# Upstream archives used when the PUL mirror cannot be reached.
+pul_upstream_archive_host: archive.ubuntu.com
+pul_upstream_security_host: security.ubuntu.com
+
+# Reachability probe for the PUL mirror (seconds).
+pul_mirror_probe_timeout: 10
+pul_mirror_validate_certs: true
+
+# Set to true to abort instead of falling back to the upstream archive.
+pul_mirror_required: false

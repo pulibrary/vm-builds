@@ -8,17 +8,90 @@
   ansible.builtin.set_fact:
     ubuntu_codename: "{{ ansible_distribution_release | default(ansible_lsb.codename) }}"
 
+# Ubuntu 24.04+ ships stock sources in deb822 format at
+# /etc/apt/sources.list.d/ubuntu.sources. Where that file exists it already is a
+# complete upstream fallback, so we leave it in place and skip our own .list
+# drop-ins for archive/security; duplicating it only produces
+# "configured multiple times" warnings.
+- name: Look for deb822 stock sources
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list.d/ubuntu.sources
+  register: pul_mirror_stock_deb822
+
+- name: Record whether stock upstream sources are already configured
+  ansible.builtin.set_fact:
+    pul_upstream_stock_present: "{{ pul_mirror_stock_deb822.stat.exists }}"
+
+# The PUL mirror is a convenience, never a hard dependency: probe it first so an
+# outage degrades to the upstream archive instead of failing the build (or, on a
+# running host, leaving apt with no usable source at all).
+- name: Check whether the PUL mirror is reachable
+  ansible.builtin.uri:
+    url: "https://{{ pul_mirror_host }}/mirror/ubuntu/dists/{{ ubuntu_codename }}/Release"
+    method: HEAD
+    timeout: "{{ pul_mirror_probe_timeout }}"
+    validate_certs: "{{ pul_mirror_validate_certs }}"
+  register: pul_mirror_probe
+  changed_when: false
+  failed_when: false
+
+- name: Record PUL mirror availability
+  ansible.builtin.set_fact:
+    pul_mirror_available: "{{ (pul_mirror_probe.status | default(0)) == 200 }}"
+
+- name: Fail when the PUL mirror is required but unreachable
+  ansible.builtin.fail:
+    msg: >-
+      {{ pul_mirror_host }} is unreachable
+      (HTTP {{ pul_mirror_probe.status | default('n/a') }})
+      and pul_mirror_required is true.
+  when:
+    - pul_mirror_required | bool
+    - not pul_mirror_available
+
+- name: Report the fallback to the upstream Ubuntu archive
+  ansible.builtin.debug:
+    msg: >-
+      {{ pul_mirror_host }} is unreachable
+      (HTTP {{ pul_mirror_probe.status | default('n/a') }});
+      using {{ pul_upstream_archive_host }} instead.
+  when: not pul_mirror_available
+
 # Comment out ALL stock pocket lines in the default sources.list.
-# We re-add archive/updates/backports pointing at pulmirror, and
-# -security pointing at Canonical, via dedicated files in sources.list.d/.
-# Doing this unconditionally avoids the "configured multiple times"
-# warnings that appear when the stock lines coexist with our drop-ins.
+# We re-add archive/updates/backports (pulmirror when available, upstream
+# always) and -security pointing at Canonical, via dedicated files in
+# sources.list.d/. Doing this unconditionally avoids the "configured multiple
+# times" warnings that appear when the stock lines coexist with our drop-ins.
 - name: Comment stock Ubuntu pocket lines in /etc/apt/sources.list
   ansible.builtin.replace:
     path: /etc/apt/sources.list
     regexp: '^(deb\s+(?:http|https)://(?:archive|security)\.ubuntu\.com/ubuntu\s+{{ ubuntu_codename }}(?:-\w+)?\s+.*)$'
     replace: '# \1'
+  when: not pul_upstream_stock_present
   notify: apt update
+
+# Upstream archive is always configured, whether or not pulmirror answered, so
+# apt keeps working if the mirror disappears later in the host's life.
+- name: Ensure the upstream Ubuntu archive remains configured as a fallback
+  ansible.builtin.apt_repository:
+    repo: "deb http://{{ pul_upstream_archive_host }}/ubuntu {{ item }} main restricted universe multiverse"
+    state: present
+    filename: "20-ubuntu-archive"
+    update_cache: no
+  loop:
+    - "{{ ubuntu_codename }}"
+    - "{{ ubuntu_codename }}-updates"
+    - "{{ ubuntu_codename }}-backports"
+  when: not pul_upstream_stock_present
+
+# Security stays on Canonical
+- name: Ensure default security repo is present
+  ansible.builtin.apt_repository:
+    repo: "deb http://{{ pul_upstream_security_host }}/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
+    state: present
+    filename: "10-security"
+    update_cache: no
+  when: not pul_upstream_stock_present
 
 # pulmirror for archive/updates/backports
 - name: Add PUL mirror (archive/updates/backports)
@@ -31,14 +104,7 @@
     - "{{ ubuntu_codename }}"
     - "{{ ubuntu_codename }}-updates"
     - "{{ ubuntu_codename }}-backports"
-
-# Security stays on Canonical
-- name: Ensure default security repo is present
-  ansible.builtin.apt_repository:
-    repo: "deb http://security.ubuntu.com/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
-    state: present
-    filename: "10-security"
-    update_cache: no
+  when: pul_mirror_available
 
 # Soft-prefer the PUL mirror without breaking fallbacks
 - name: Pin PUL mirror slightly higher than defaults
@@ -49,12 +115,42 @@
       Package: *
       Pin: origin "{{ pul_mirror_host }}"
       Pin-Priority: 600
+  when: pul_mirror_available
 
-- name: apt update (with retries)
-  ansible.builtin.apt:
-    update_cache: yes
-    cache_valid_time: 3600
-  register: aptu
-  retries: 5
-  delay: 3
-  until: aptu is succeeded
+- name: Remove PUL mirror configuration while it is unreachable
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ pul_mirror_config_files }}"
+  when: not pul_mirror_available
+
+- name: Refresh the apt cache
+  block:
+    - name: apt update (with retries)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      register: aptu
+      retries: 5
+      delay: 3
+      until: aptu is succeeded
+  rescue:
+    # The probe passed but apt still could not fetch indexes, so treat the
+    # mirror as unusable for this run and finish from the upstream archive.
+    - name: Drop the PUL mirror after repeated apt failures
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ pul_mirror_config_files }}"
+
+    - name: Record that the PUL mirror was abandoned
+      ansible.builtin.set_fact:
+        pul_mirror_available: false
+
+    - name: apt update from the upstream archive only (with retries)
+      ansible.builtin.apt:
+        update_cache: yes
+      register: aptu_upstream
+      retries: 5
+      delay: 3
+      until: aptu_upstream is succeeded

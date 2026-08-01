@@ -1,8 +1,4 @@
 ---
-- name: Configure preferred mirrors (Debian/Ubuntu)
-  import_tasks: debian.yml
-  when: ansible_os_family == 'Debian'
-
-- name: Configure preferred mirrors (RHEL/Rocky)
-  import_tasks: redhat.yml
-  when: ansible_os_family == 'RedHat'
+- name: "{{ mirrors_task_name }}"
+  ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
+  when: ansible_os_family in ['Debian', 'RedHat']

@@ -1,0 +1,8 @@
+---
+mirrors_task_name: Configure the preferred package mirrors.
+
+# Files written only when the PUL mirror is usable; removed otherwise so apt is
+# never left pointing at a mirror it cannot reach.
+pul_mirror_config_files:
+  - /etc/apt/sources.list.d/00-pulmirror.list
+  - /etc/apt/preferences.d/99-pulmirror.pref
