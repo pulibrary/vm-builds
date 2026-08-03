@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+#
+# Shared helpers for the security first-boot installers.
+#
+# These run unattended on a machine that cloud-init and the distribution's own
+# update timers are still working on, so every package operation has to survive a
+# busy package manager and must never leave the package database in a state that
+# breaks later upgrades.
+
+# Downloaded packages stay here instead of /tmp: if an install is interrupted,
+# the package manager needs the original archive to repair the package, and /tmp
+# is wiped on reboot ("needs to be reinstalled, but I can't find an archive").
+PUL_PKG_CACHE="${PUL_PKG_CACHE:-/var/cache/pul/security-firstboot}"
+
+# Seconds to wait for another process to release the dpkg/apt locks.
+PUL_LOCK_TIMEOUT="${PUL_LOCK_TIMEOUT:-600}"
+
+pul_pkg_cache() {
+  mkdir -p "$PUL_PKG_CACHE"
+  chmod 0700 "$PUL_PKG_CACHE"
+  printf '%s' "$PUL_PKG_CACHE"
+}
+
+pul_apt() {
+  DEBIAN_FRONTEND=noninteractive apt-get \
+    -o DPkg::Lock::Timeout="$PUL_LOCK_TIMEOUT" \
+    -o Dpkg::Options::=--force-confdef \
+    -o Dpkg::Options::=--force-confold \
+    "$@"
+}
+
+# Install a local .deb. Returns non-zero on failure, having backed the package
+# out so that unrelated apt commands still work afterwards.
+pul_deb_install() {
+  local deb="$1" pkg=""
+
+  # Heal a previous interrupted install; otherwise every apt call refuses to run.
+  dpkg --configure -a || true
+
+  pul_apt -y update || true
+  if pul_apt -y install "$deb"; then
+    return 0
+  fi
+
+  pkg="$(dpkg-deb -f "$deb" Package 2>/dev/null || true)"
+  if [[ -n "$pkg" ]]; then
+    echo "pul: backing out failed install of ${pkg}" >&2
+    pul_apt -y remove --purge "$pkg" \
+      || dpkg --remove --force-remove-reinstreq "$pkg" \
+      || true
+  fi
+  dpkg --configure -a || true
+  return 1
+}
+
+# Install a local .rpm.
+pul_rpm_install() {
+  local rpm="$1"
+  dnf -y install "$rpm" 2>/dev/null || yum -y install "$rpm"
+}

@@ -6,3 +6,8 @@ mirrors_task_name: Configure the preferred package mirrors.
 pul_mirror_config_files:
   - /etc/apt/sources.list.d/00-pulmirror.list
   - /etc/apt/preferences.d/99-pulmirror.pref
+
+# Drop-ins we add only when the distribution does not configure the upstream
+# archive itself, and delete again when it does.
+pul_upstream_archive_filename: 20-ubuntu-archive
+pul_upstream_security_filename: 10-security

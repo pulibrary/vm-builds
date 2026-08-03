@@ -2,6 +2,9 @@
 # {{ ansible_managed | comment }}
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source /usr/local/lib/pul-security-firstboot.sh
+
 STATE_DIR="/var/lib/security-firstboot"
 MARKER="${STATE_DIR}/rapid7.done"
 mkdir -p "$STATE_DIR"
@@ -25,16 +28,19 @@ installed=false
 if command -v dpkg >/dev/null 2>&1; then
   if [[ -n "$R7_DEB_URL" ]]; then
     echo "Rapid7: installing DEB…"
-    curl -fsSL "$R7_DEB_URL" -o /tmp/rapid7.deb
-    apt-get update -y || true
-    apt-get -y install /tmp/rapid7.deb && installed=true || true
+    R7_DEB="$(pul_pkg_cache)/rapid7-insight-agent.deb"
+    if curl -fsSL "$R7_DEB_URL" -o "$R7_DEB" && pul_deb_install "$R7_DEB"; then
+      installed=true
+    fi
   fi
 else
   if [[ -n "$R7_RPM_URL" ]]; then
     echo "Rapid7: installing RPM…"
+    R7_RPM="$(pul_pkg_cache)/rapid7-insight-agent.rpm"
     curl -fsSL "$R7_RPM_PUBKEY" | rpm --import -
-    curl -fsSL "$R7_RPM_URL" -o /tmp/rapid7.rpm
-    (dnf -y install /tmp/rapid7.rpm || yum -y install /tmp/rapid7.rpm) && installed=true || true
+    if curl -fsSL "$R7_RPM_URL" -o "$R7_RPM" && pul_rpm_install "$R7_RPM"; then
+      installed=true
+    fi
   fi
 fi
 

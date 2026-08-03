@@ -8,19 +8,38 @@
   ansible.builtin.set_fact:
     ubuntu_codename: "{{ ansible_distribution_release | default(ansible_lsb.codename) }}"
 
-# Ubuntu 24.04+ ships stock sources in deb822 format at
-# /etc/apt/sources.list.d/ubuntu.sources. Where that file exists it already is a
-# complete upstream fallback, so we leave it in place and skip our own .list
-# drop-ins for archive/security; duplicating it only produces
-# "configured multiple times" warnings.
-- name: Look for deb822 stock sources
+# We deliberately never rewrite /etc/apt/sources.list. Whatever Ubuntu shipped
+# there (one-line entries on 22.04, deb822 ubuntu.sources on 24.04+) already is
+# the upstream fallback this role wants to guarantee, and editing it by regexp is
+# the easiest way to leave a host with no usable apt source at all. Instead,
+# detect what the distribution configures and only fill in the gaps.
+- name: Look for stock deb822 sources (Ubuntu 24.04+)
   ansible.builtin.stat:
     path: /etc/apt/sources.list.d/ubuntu.sources
-  register: pul_mirror_stock_deb822
+  register: pul_stock_deb822
 
-- name: Record whether stock upstream sources are already configured
+- name: Look for active upstream archive entries in /etc/apt/sources.list
+  ansible.builtin.find:
+    paths: /etc/apt
+    patterns: sources.list
+    contains: '^deb\s+(\[[^]]*\]\s+)?https?://\S+\s+{{ ubuntu_codename }}\s'
+  register: pul_stock_archive
+
+- name: Look for active upstream security entries in /etc/apt/sources.list
+  ansible.builtin.find:
+    paths: /etc/apt
+    patterns: sources.list
+    contains: '^deb\s+(\[[^]]*\]\s+)?https?://\S+\s+{{ ubuntu_codename }}-security\s'
+  register: pul_stock_security
+
+- name: Record which upstream pockets the distribution already configures
   ansible.builtin.set_fact:
-    pul_upstream_stock_present: "{{ pul_mirror_stock_deb822.stat.exists }}"
+    pul_upstream_archive_present: >-
+      {{ pul_stock_deb822.stat.exists
+         or (pul_stock_archive.matched | default(0) | int) > 0 }}
+    pul_upstream_security_present: >-
+      {{ pul_stock_deb822.stat.exists
+         or (pul_stock_security.matched | default(0) | int) > 0 }}
 
 # The PUL mirror is a convenience, never a hard dependency: probe it first so an
 # outage degrades to the upstream archive instead of failing the build (or, on a
@@ -38,12 +57,18 @@
 - name: Record PUL mirror availability
   ansible.builtin.set_fact:
     pul_mirror_available: "{{ (pul_mirror_probe.status | default(0)) == 200 }}"
+    # A connection-level failure reports status -1, which on its own tells you
+    # nothing; carry the underlying error so an expired certificate or DNS
+    # problem is obvious in the build log instead of looking like an outage.
+    pul_mirror_probe_reason: >-
+      HTTP {{ pul_mirror_probe.status | default('n/a') }}
+      {{ '- ' ~ pul_mirror_probe.msg if pul_mirror_probe.msg is defined else '' }}
 
 - name: Fail when the PUL mirror is required but unreachable
   ansible.builtin.fail:
     msg: >-
       {{ pul_mirror_host }} is unreachable
-      (HTTP {{ pul_mirror_probe.status | default('n/a') }})
+      ({{ pul_mirror_probe_reason | trim }})
       and pul_mirror_required is true.
   when:
     - pul_mirror_required | bool
@@ -53,47 +78,48 @@
   ansible.builtin.debug:
     msg: >-
       {{ pul_mirror_host }} is unreachable
-      (HTTP {{ pul_mirror_probe.status | default('n/a') }});
+      ({{ pul_mirror_probe_reason | trim }});
       using {{ pul_upstream_archive_host }} instead.
   when: not pul_mirror_available
 
-# Comment out ALL stock pocket lines in the default sources.list.
-# We re-add archive/updates/backports (pulmirror when available, upstream
-# always) and -security pointing at Canonical, via dedicated files in
-# sources.list.d/. Doing this unconditionally avoids the "configured multiple
-# times" warnings that appear when the stock lines coexist with our drop-ins.
-- name: Comment stock Ubuntu pocket lines in /etc/apt/sources.list
-  ansible.builtin.replace:
-    path: /etc/apt/sources.list
-    regexp: '^(deb\s+(?:http|https)://(?:archive|security)\.ubuntu\.com/ubuntu\s+{{ ubuntu_codename }}(?:-\w+)?\s+.*)$'
-    replace: '# \1'
-  when: not pul_upstream_stock_present
-  notify: apt update
-
-# Upstream archive is always configured, whether or not pulmirror answered, so
-# apt keeps working if the mirror disappears later in the host's life.
-- name: Ensure the upstream Ubuntu archive remains configured as a fallback
+# Only add upstream drop-ins where the distribution has none. Adding them
+# alongside the stock entries points apt at the same suite twice, which makes
+# every later apt run emit a page of "configured multiple times" warnings.
+- name: Ensure the upstream Ubuntu archive is configured as a fallback
   ansible.builtin.apt_repository:
     repo: "deb http://{{ pul_upstream_archive_host }}/ubuntu {{ item }} main restricted universe multiverse"
     state: present
-    filename: "20-ubuntu-archive"
+    filename: "{{ pul_upstream_archive_filename }}"
     update_cache: no
   loop:
     - "{{ ubuntu_codename }}"
     - "{{ ubuntu_codename }}-updates"
     - "{{ ubuntu_codename }}-backports"
-  when: not pul_upstream_stock_present
+  when: not (pul_upstream_archive_present | bool)
+
+- name: Remove our archive drop-in when the distribution already provides one
+  ansible.builtin.file:
+    path: "/etc/apt/sources.list.d/{{ pul_upstream_archive_filename }}.list"
+    state: absent
+  when: pul_upstream_archive_present | bool
 
 # Security stays on Canonical
 - name: Ensure default security repo is present
   ansible.builtin.apt_repository:
     repo: "deb http://{{ pul_upstream_security_host }}/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
     state: present
-    filename: "10-security"
+    filename: "{{ pul_upstream_security_filename }}"
     update_cache: no
-  when: not pul_upstream_stock_present
+  when: not (pul_upstream_security_present | bool)
 
-# pulmirror for archive/updates/backports
+- name: Remove our security drop-in when the distribution already provides one
+  ansible.builtin.file:
+    path: "/etc/apt/sources.list.d/{{ pul_upstream_security_filename }}.list"
+    state: absent
+  when: pul_upstream_security_present | bool
+
+# pulmirror for archive/updates/backports. Its URI differs from the upstream
+# archive, so this adds a genuinely new source rather than a duplicate one.
 - name: Add PUL mirror (archive/updates/backports)
   ansible.builtin.apt_repository:
     repo: "deb https://{{ pul_mirror_host }}/mirror/ubuntu {{ item }} main restricted universe multiverse"

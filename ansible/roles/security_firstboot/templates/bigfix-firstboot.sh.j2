@@ -2,6 +2,9 @@
 # {{ ansible_managed | comment }}
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source /usr/local/lib/pul-security-firstboot.sh
+
 STATE_DIR="/var/lib/security-firstboot"
 MARKER="${STATE_DIR}/bigfix.done"
 
@@ -47,14 +50,21 @@ fi
 # Install agent package (Debian/Ubuntu vs RHEL/Rocky)
 if command -v dpkg >/dev/null 2>&1; then
   echo "BigFix: installing DEB…"
-  curl -fsSL "{{ bigfix_deb_url }}" -o /tmp/BESAgent.deb
-  apt-get update -y || true
-  apt-get -y install /tmp/BESAgent.deb
+  BESAGENT_DEB="$(pul_pkg_cache)/BESAgent.deb"
+  curl -fsSL "{{ bigfix_deb_url }}" -o "$BESAGENT_DEB"
+  if ! pul_deb_install "$BESAGENT_DEB"; then
+    echo "BigFix: package install failed; will retry on next boot."
+    exit 0
+  fi
 else
   echo "BigFix: installing RPM…"
+  BESAGENT_RPM="$(pul_pkg_cache)/BESAgent.rpm"
   curl -fsSL "{{ bigfix_gpg_key_url }}" | rpm --import -
-  curl -fsSL "{{ bigfix_rpm_url }}" -o /tmp/BESAgent.rpm
-  dnf -y install /tmp/BESAgent.rpm || yum -y install /tmp/BESAgent.rpm
+  curl -fsSL "{{ bigfix_rpm_url }}" -o "$BESAGENT_RPM"
+  if ! pul_rpm_install "$BESAGENT_RPM"; then
+    echo "BigFix: package install failed; will retry on next boot."
+    exit 0
+  fi
 fi
 
 # Start & enable the service (name varies between distros)
