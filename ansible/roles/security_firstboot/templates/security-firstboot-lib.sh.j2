@@ -16,10 +16,49 @@ PUL_PKG_CACHE="${PUL_PKG_CACHE:-/var/cache/pul/security-firstboot}"
 # Seconds to wait for another process to release the dpkg/apt locks.
 PUL_LOCK_TIMEOUT="${PUL_LOCK_TIMEOUT:-600}"
 
+# Bounded so a blocked or proxied egress path cannot stall the boot, and so a
+# single dropped connection does not lose the whole install.
+PUL_CONNECT_TIMEOUT="${PUL_CONNECT_TIMEOUT:-15}"
+PUL_MAX_TIME="${PUL_MAX_TIME:-300}"
+PUL_FETCH_ATTEMPTS="${PUL_FETCH_ATTEMPTS:-3}"
+
 pul_pkg_cache() {
   mkdir -p "$PUL_PKG_CACHE"
   chmod 0700 "$PUL_PKG_CACHE"
   printf '%s' "$PUL_PKG_CACHE"
+}
+
+# Download a URL to a file, retrying a few times. Returns non-zero instead of
+# aborting so the caller can log, leave its marker unwritten and let systemd
+# retry the unit on the next boot rather than parking it in "failed".
+pul_fetch() {
+  local url="$1" dest="$2" attempt=1
+  while true; do
+    if curl -fsSL --connect-timeout "$PUL_CONNECT_TIMEOUT" \
+      --max-time "$PUL_MAX_TIME" "$url" -o "$dest"; then
+      return 0
+    fi
+    if [[ "$attempt" -ge "$PUL_FETCH_ATTEMPTS" ]]; then
+      break
+    fi
+    sleep $((attempt * 5))
+    attempt=$((attempt + 1))
+  done
+  rm -f "$dest"
+  echo "pul: download failed after ${PUL_FETCH_ATTEMPTS} attempts: ${url}" >&2
+  return 1
+}
+
+# Import an RPM signing key. The key is downloaded to a file first rather than
+# piped into "rpm --import -": when the download fails, rpm reads an empty
+# stdin and exits 1, and with "set -o pipefail" that becomes the status of the
+# whole pipeline, so "set -e" kills the installer and the unit stays failed on
+# every later boot.
+pul_rpm_key_import() {
+  local url="$1" key
+  key="$(pul_pkg_cache)/$(basename "$url").key"
+  pul_fetch "$url" "$key" || return 1
+  rpm --import "$key"
 }
 
 pul_apt() {

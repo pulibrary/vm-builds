@@ -54,6 +54,25 @@ These variables should be provided via cloud-init user-data and will be written 
 ### Cortex XDR
 - `CORTEX_XDR_TARBALL_URL` - URL to download the Cortex XDR installation tarball
 
+### Optional package source overrides
+
+Hosts without direct egress to the vendors can be pointed at a local mirror
+through the same env file, without rebuilding the image:
+
+- `BIGFIX_DEB_URL`, `BIGFIX_RPM_URL`, `BIGFIX_GPG_KEY_URL`
+- `RAPID7_DEB_URL`, `RAPID7_RPM_URL`, `RAPID7_RPM_PUBKEY`
+- `CORTEX_XDR_DEB_TARBALL_URL`, `CORTEX_XDR_RPM_TARBALL_URL`
+
+### Retry contract
+
+A download or install that fails is not an error: the installer logs the
+reason, exits 0 without writing its marker, and systemd runs it again on the
+next boot. Anything that aborts the script instead (an unguarded command
+under `set -e`) leaves the unit in `failed` forever, which monitoring reports
+as a down service on every boot. Route every network call through `pul_fetch`
+or `pul_rpm_key_import` and every package install through `pul_deb_install`
+or `pul_rpm_install`.
+
 ## Cortex XDR Installation Details
 
 The Cortex XDR agent installation follows the manual process documented in the vendor README:

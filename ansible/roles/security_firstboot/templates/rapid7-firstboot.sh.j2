@@ -15,7 +15,7 @@ mkdir -p "$STATE_DIR"
 # Allow overrides via env; fall back to template defaults
 R7_DEB_URL="${RAPID7_DEB_URL:-{{ rapid7_deb_url }}}"
 R7_RPM_URL="${RAPID7_RPM_URL:-{{ rapid7_rpm_url }}}"
-R7_RPM_PUBKEY="{{ rapid7_rpm_pubkey }}"
+R7_RPM_PUBKEY="${RAPID7_RPM_PUBKEY:-{{ rapid7_rpm_pubkey }}}"
 
 [[ -f "$MARKER" ]] && exit 0
 
@@ -29,7 +29,7 @@ if command -v dpkg >/dev/null 2>&1; then
   if [[ -n "$R7_DEB_URL" ]]; then
     echo "Rapid7: installing DEB…"
     R7_DEB="$(pul_pkg_cache)/rapid7-insight-agent.deb"
-    if curl -fsSL "$R7_DEB_URL" -o "$R7_DEB" && pul_deb_install "$R7_DEB"; then
+    if pul_fetch "$R7_DEB_URL" "$R7_DEB" && pul_deb_install "$R7_DEB"; then
       installed=true
     fi
   fi
@@ -37,8 +37,9 @@ else
   if [[ -n "$R7_RPM_URL" ]]; then
     echo "Rapid7: installing RPM…"
     R7_RPM="$(pul_pkg_cache)/rapid7-insight-agent.rpm"
-    curl -fsSL "$R7_RPM_PUBKEY" | rpm --import -
-    if curl -fsSL "$R7_RPM_URL" -o "$R7_RPM" && pul_rpm_install "$R7_RPM"; then
+    if pul_rpm_key_import "$R7_RPM_PUBKEY" &&
+      pul_fetch "$R7_RPM_URL" "$R7_RPM" &&
+      pul_rpm_install "$R7_RPM"; then
       installed=true
     fi
   fi
@@ -53,7 +54,7 @@ if [[ "$installed" == true ]]; then
   touch "$MARKER"
   echo "Rapid7: installed."
 else
-  echo "Rapid7: no package URL available or install failed; skipping."
+  echo "Rapid7: no package URL available or install failed; will retry on next boot."
 fi
 
 exit 0
