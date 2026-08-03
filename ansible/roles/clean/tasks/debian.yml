@@ -106,3 +106,12 @@
 
 - name: SSH hardening (AllowUsers pulsys only on final image)
   ansible.builtin.include_tasks: ssh_harden.yml
+
+# The base role blocks service restarts from package scripts while the image is
+# being built. Leaving that in place would silently stop every service from
+# being started or restarted by apt on the deployed instance, including the
+# first-boot security tool installers, so it has to go before the image ships.
+- name: Allow package scripts to manage services again on the finished image
+  ansible.builtin.file:
+    path: /usr/sbin/policy-rc.d
+    state: absent
