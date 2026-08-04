@@ -2,6 +2,9 @@
 # {{ ansible_managed | comment }}
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source /usr/local/lib/pul-security-firstboot.sh
+
 STATE_DIR="/var/lib/security-firstboot"
 MARKER="${STATE_DIR}/bigfix.done"
 
@@ -10,6 +13,13 @@ LEGACY_ETC_DIR="/etc/opt/BESClient"   # BigFix default lookup path
 
 # Env provided by systemd EnvironmentFile (/etc/pul/security-tools.env)
 : "${BIGFIX_MASTHEAD_URL:=}"
+
+# Package sources can be repointed at a local mirror without rebuilding the
+# image, which is what an environment with no direct egress to software.bigfix.com
+# needs.
+BIGFIX_DEB_URL="${BIGFIX_DEB_URL:-{{ bigfix_deb_url }}}"
+BIGFIX_RPM_URL="${BIGFIX_RPM_URL:-{{ bigfix_rpm_url }}}"
+BIGFIX_GPG_KEY_URL="${BIGFIX_GPG_KEY_URL:-{{ bigfix_gpg_key_url }}}"
 
 if [[ -f "$MARKER" ]]; then
   exit 0
@@ -34,10 +44,10 @@ if [[ -n "${BIGFIX_MASTHEAD_B64:-}" ]]; then
   echo "$BIGFIX_MASTHEAD_B64" | base64 -d > "$INSTALL_ROOT/actionsite.afxm"
   chmod 0600 "$INSTALL_ROOT/actionsite.afxm"
 elif [[ -n "$BIGFIX_MASTHEAD_URL" ]]; then
-  curl -fsSL --max-time 75 "$BIGFIX_MASTHEAD_URL" -o "$INSTALL_ROOT/actionsite.afxm" || {
-    echo "BigFix: cannot fetch masthead; skipping."
+  if ! pul_fetch "$BIGFIX_MASTHEAD_URL" "$INSTALL_ROOT/actionsite.afxm"; then
+    echo "BigFix: cannot fetch masthead; will retry on next boot."
     exit 0
-  }
+  fi
   chmod 0600 "$INSTALL_ROOT/actionsite.afxm"
 else
   echo "BigFix: no masthead provided; skipping."
@@ -47,14 +57,30 @@ fi
 # Install agent package (Debian/Ubuntu vs RHEL/Rocky)
 if command -v dpkg >/dev/null 2>&1; then
   echo "BigFix: installing DEB…"
-  curl -fsSL "{{ bigfix_deb_url }}" -o /tmp/BESAgent.deb
-  apt-get update -y || true
-  apt-get -y install /tmp/BESAgent.deb
+  BESAGENT_DEB="$(pul_pkg_cache)/BESAgent.deb"
+  if ! pul_fetch "$BIGFIX_DEB_URL" "$BESAGENT_DEB"; then
+    echo "BigFix: cannot download agent; will retry on next boot."
+    exit 0
+  fi
+  if ! pul_deb_install "$BESAGENT_DEB"; then
+    echo "BigFix: package install failed; will retry on next boot."
+    exit 0
+  fi
 else
   echo "BigFix: installing RPM…"
-  curl -fsSL "{{ bigfix_gpg_key_url }}" | rpm --import -
-  curl -fsSL "{{ bigfix_rpm_url }}" -o /tmp/BESAgent.rpm
-  dnf -y install /tmp/BESAgent.rpm || yum -y install /tmp/BESAgent.rpm
+  BESAGENT_RPM="$(pul_pkg_cache)/BESAgent.rpm"
+  if ! pul_rpm_key_import "$BIGFIX_GPG_KEY_URL"; then
+    echo "BigFix: cannot import signing key; will retry on next boot."
+    exit 0
+  fi
+  if ! pul_fetch "$BIGFIX_RPM_URL" "$BESAGENT_RPM"; then
+    echo "BigFix: cannot download agent; will retry on next boot."
+    exit 0
+  fi
+  if ! pul_rpm_install "$BESAGENT_RPM"; then
+    echo "BigFix: package install failed; will retry on next boot."
+    exit 0
+  fi
 fi
 
 # Start & enable the service (name varies between distros)

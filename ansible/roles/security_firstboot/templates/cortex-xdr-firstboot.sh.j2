@@ -2,6 +2,9 @@
 # {{ ansible_managed | comment }}
 set -euo pipefail
 
+# shellcheck source=/dev/null
+source /usr/local/lib/pul-security-firstboot.sh
+
 STATE_DIR="/var/lib/security-firstboot"
 MARKER="${STATE_DIR}/cortex-xdr.done"
 WORK_DIR="/tmp/cortex-xdr-install"
@@ -56,14 +59,16 @@ EOF
 chmod 0600 /etc/panw/cortex.conf
 echo "Cortex XDR: configuration written to /etc/panw/cortex.conf"
 
-# Install package (DEB or RPM based on OS)
+# Install package (DEB or RPM based on OS). The package is copied out of the
+# scratch dir first so it survives cleanup and stays available for repairs.
 installed=false
 if command -v dpkg >/dev/null 2>&1; then
   CORTEX_DEB=$(find . -name "*.deb" -type f | head -n1)
   if [[ -n "$CORTEX_DEB" && -f "$CORTEX_DEB" ]]; then
     echo "Cortex XDR: installing DEB package $CORTEX_DEB..."
-    apt-get update -y || true
-    if apt-get -y install "$CORTEX_DEB"; then
+    CORTEX_CACHED="$(pul_pkg_cache)/$(basename "$CORTEX_DEB")"
+    cp -f "$CORTEX_DEB" "$CORTEX_CACHED"
+    if pul_deb_install "$CORTEX_CACHED"; then
       installed=true
     fi
   else
@@ -73,7 +78,9 @@ else
   CORTEX_RPM=$(find . -name "*.rpm" -type f | head -n1)
   if [[ -n "$CORTEX_RPM" && -f "$CORTEX_RPM" ]]; then
     echo "Cortex XDR: installing RPM package $CORTEX_RPM..."
-    if dnf -y install "$CORTEX_RPM" 2>/dev/null || yum -y install "$CORTEX_RPM"; then
+    CORTEX_CACHED="$(pul_pkg_cache)/$(basename "$CORTEX_RPM")"
+    cp -f "$CORTEX_RPM" "$CORTEX_CACHED"
+    if pul_rpm_install "$CORTEX_CACHED"; then
       installed=true
     fi
   else

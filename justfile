@@ -5,6 +5,7 @@ set shell := ["bash", "-c"]
 
 jammy_tpl := "builds/linux/ubuntu/jammy-cloudimg.pkr.hcl"
 noble_tpl := "builds/linux/ubuntu/noble-cloudimg.pkr.hcl"
+resolute_tpl := "builds/linux/ubuntu/resolute-cloudimg.pkr.hcl"
 ubuntu_qemu_desktop_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-desktop-cloudimg.pkr.hcl"
 ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
@@ -21,6 +22,8 @@ init-jammy:
     packer init {{ jammy_tpl }}
 init-noble:
     packer init {{ noble_tpl }}
+init-resolute:
+    packer init {{ resolute_tpl }}
 
 init-ubuntu-qemu-desktop:
     packer init {{ ubuntu_qemu_desktop_tpl }}
@@ -37,7 +40,7 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-jammy init-noble init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
+init-all: init-jammy init-noble init-resolute init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
     @echo "PACKER: All templates initialized."
 init-freebsd-gcp:
     packer init {{ freebsd_gcp_tpl }}
@@ -117,6 +120,12 @@ build-noble export_ovf='true' debug='false' VARS='':
     [[ "{{ debug }}" == "true" ]] \
       && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ noble_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ noble_tpl }}
+
+build-resolute export_ovf='true' debug='false' VARS='':
+    @echo "PACKER: Building Ubuntu QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
+    [[ "{{ debug }}" == "true" ]] \
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ resolute_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ resolute_tpl }}
 
 build-ubuntu-qemu-desktop iso_checksum export_ovf='false' debug='false' VARS='':
     just validate-ubuntu-qemu-desktop {{ iso_checksum }}

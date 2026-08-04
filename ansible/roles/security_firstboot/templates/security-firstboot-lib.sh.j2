@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# {{ ansible_managed | comment }}
+#
+# Shared helpers for the security first-boot installers.
+#
+# These run unattended on a machine that cloud-init and the distribution's own
+# update timers are still working on, so every package operation has to survive a
+# busy package manager and must never leave the package database in a state that
+# breaks later upgrades.
+
+# Downloaded packages stay here instead of /tmp: if an install is interrupted,
+# the package manager needs the original archive to repair the package, and /tmp
+# is wiped on reboot ("needs to be reinstalled, but I can't find an archive").
+PUL_PKG_CACHE="${PUL_PKG_CACHE:-/var/cache/pul/security-firstboot}"
+
+# Seconds to wait for another process to release the dpkg/apt locks.
+PUL_LOCK_TIMEOUT="${PUL_LOCK_TIMEOUT:-600}"
+
+# Bounded so a blocked or proxied egress path cannot stall the boot, and so a
+# single dropped connection does not lose the whole install.
+PUL_CONNECT_TIMEOUT="${PUL_CONNECT_TIMEOUT:-15}"
+PUL_MAX_TIME="${PUL_MAX_TIME:-300}"
+PUL_FETCH_ATTEMPTS="${PUL_FETCH_ATTEMPTS:-3}"
+
+pul_pkg_cache() {
+  mkdir -p "$PUL_PKG_CACHE"
+  chmod 0700 "$PUL_PKG_CACHE"
+  printf '%s' "$PUL_PKG_CACHE"
+}
+
+# Download a URL to a file, retrying a few times. Returns non-zero instead of
+# aborting so the caller can log, leave its marker unwritten and let systemd
+# retry the unit on the next boot rather than parking it in "failed".
+pul_fetch() {
+  local url="$1" dest="$2" attempt=1
+  while true; do
+    if curl -fsSL --connect-timeout "$PUL_CONNECT_TIMEOUT" \
+      --max-time "$PUL_MAX_TIME" "$url" -o "$dest"; then
+      return 0
+    fi
+    if [[ "$attempt" -ge "$PUL_FETCH_ATTEMPTS" ]]; then
+      break
+    fi
+    sleep $((attempt * 5))
+    attempt=$((attempt + 1))
+  done
+  rm -f "$dest"
+  echo "pul: download failed after ${PUL_FETCH_ATTEMPTS} attempts: ${url}" >&2
+  return 1
+}
+
+# Import an RPM signing key. The key is downloaded to a file first rather than
+# piped into "rpm --import -": when the download fails, rpm reads an empty
+# stdin and exits 1, and with "set -o pipefail" that becomes the status of the
+# whole pipeline, so "set -e" kills the installer and the unit stays failed on
+# every later boot.
+pul_rpm_key_import() {
+  local url="$1" key
+  key="$(pul_pkg_cache)/$(basename "$url").key"
+  pul_fetch "$url" "$key" || return 1
+  rpm --import "$key"
+}
+
+pul_apt() {
+  DEBIAN_FRONTEND=noninteractive apt-get \
+    -o DPkg::Lock::Timeout="$PUL_LOCK_TIMEOUT" \
+    -o Dpkg::Options::=--force-confdef \
+    -o Dpkg::Options::=--force-confold \
+    "$@"
+}
+
+# Install a local .deb. Returns non-zero on failure, having backed the package
+# out so that unrelated apt commands still work afterwards.
+pul_deb_install() {
+  local deb="$1" pkg=""
+
+  # Heal a previous interrupted install; otherwise every apt call refuses to run.
+  dpkg --configure -a || true
+
+  pul_apt -y update || true
+  if pul_apt -y install "$deb"; then
+    return 0
+  fi
+
+  pkg="$(dpkg-deb -f "$deb" Package 2>/dev/null || true)"
+  if [[ -n "$pkg" ]]; then
+    echo "pul: backing out failed install of ${pkg}" >&2
+    pul_apt -y remove --purge "$pkg" \
+      || dpkg --remove --force-remove-reinstreq "$pkg" \
+      || true
+  fi
+  dpkg --configure -a || true
+  return 1
+}
+
+# Install a local .rpm.
+pul_rpm_install() {
+  local rpm="$1"
+  dnf -y install "$rpm" 2>/dev/null || yum -y install "$rpm"
+}

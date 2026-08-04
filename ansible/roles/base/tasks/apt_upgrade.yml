@@ -1,0 +1,29 @@
+---
+- name: Getting guest operating system information.
+  ansible.builtin.debug:
+    msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Updating the operating system.
+  ansible.builtin.apt:
+    name: "*"
+    state: latest # noqa package-latest
+    update_cache: true
+    lock_timeout: 1800
+  register: _apt_upgrade
+  retries: 5
+  delay: 15
+
+- name: Installing additional packages.
+  ansible.builtin.apt:
+    name: "{{ base_additional_packages[ansible_os_family] }}"
+    state: latest # noqa package-latest
+    lock_timeout: 900
+  register: _apt_pkgs
+  retries: 5
+  delay: 15
+
+- name: Installing cloud-init.
+  ansible.builtin.apt:
+    name: cloud-init
+    state: latest # noqa package-latest
+  when: enable_cloudinit == 'true' and ansible_distribution_version | int >= 12

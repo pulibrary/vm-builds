@@ -21,6 +21,24 @@
   failed_when: false
   when: ansible_os_family == "Debian"
 
+# Maintainer scripts restart their own services through deb-systemd-invoke,
+# which asks /usr/sbin/policy-rc.d for permission first and treats exit code 101
+# as "do not run". Those restarts are pointless in an image that is about to be
+# shut down, and they are a real source of failed builds: the openssh-server
+# upgrade restarts ssh.service and ssh.socket together, and when systemd refuses
+# that job the postinst dies, leaving the package half-configured so every later
+# apt run fails with "1 not fully installed or removed". The clean role deletes
+# the file again so a deployed instance handles its services normally.
+- name: Prevent package scripts from restarting services during the build
+  ansible.builtin.copy:
+    dest: /usr/sbin/policy-rc.d
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      # Added by the vm-builds base role, removed again by the clean role.
+      exit 101
+  when: ansible_os_family == "Debian"
+
 - name: Wait for any running apt/dpkg processes to complete
   ansible.builtin.shell: |
     timeout=300
@@ -39,6 +57,9 @@
   changed_when: false
   when: ansible_os_family == "Debian"
 
+# The base cloud image may arrive with a package left unconfigured by its own
+# boot-time unattended upgrade. apt refuses to do anything else until that is
+# settled, so finish it now that service restarts are suppressed.
 - name: Ensure dpkg is configured (best-effort)
   ansible.builtin.command: dpkg --configure -a
   changed_when: false
@@ -47,31 +68,23 @@
 
 - name: Updating the operating system and installing additional packages.
   block:
-    - name: Getting guest operating system information.
+    - name: Update and install packages
+      ansible.builtin.include_tasks: apt_upgrade.yml
+  rescue:
+    # A failure here nearly always means a maintainer script died mid-configure.
+    # Repairing dpkg and running the same steps once more turns a dead build into
+    # a working image instead of forcing a 30 minute rebuild.
+    - name: Report the apt failure that is being repaired
       ansible.builtin.debug:
-        msg: "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+        msg: >-
+          apt failed ({{ ansible_failed_result.msg | default('unknown error') }});
+          repairing dpkg and retrying once.
 
-    - name: Updating the operating system.
-      ansible.builtin.apt:
-        name: "*"
-        state: latest # noqa package-latest
-        update_cache: true
-        lock_timeout: 1800
-      register: _apt_upgrade
-      retries: 5
-      delay: 15
+    - name: Repair an interrupted dpkg run
+      ansible.builtin.command: dpkg --configure -a
+      register: _dpkg_repair
+      changed_when: _dpkg_repair.rc == 0
+      failed_when: false
 
-    - name: Installing additional packages.
-      ansible.builtin.apt:
-        name: "{{ base_additional_packages[ansible_os_family] }}"
-        state: latest # noqa package-latest
-        lock_timeout: 900
-      register: _apt_pkgs
-      retries: 5
-      delay: 15
-
-    - name: Installing cloud-init.
-      ansible.builtin.apt:
-        name: cloud-init
-        state: latest # noqa package-latest
-      when: enable_cloudinit == 'true' and ansible_distribution_version | int >= 12
+    - name: Update and install packages (retry after repairing dpkg)
+      ansible.builtin.include_tasks: apt_upgrade.yml

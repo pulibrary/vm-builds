@@ -26,6 +26,13 @@
     force: no
   tags: ["firstboot"]
 
+- name: Install shared first-boot installer helpers
+  ansible.builtin.template:
+    src: security-firstboot-lib.sh.j2
+    dest: /usr/local/lib/pul-security-firstboot.sh
+    mode: "0644"
+  tags: ["firstboot"]
+
 - name: Install first-boot helper scripts
   ansible.builtin.template:
     src: "{{ item.src }}"
@@ -46,6 +53,11 @@
       }
   tags: ["firstboot"]
 
+# All three installers fetch and install packages, so they must not run at the
+# same time as each other or as cloud-init's own package work: concurrent
+# apt/dpkg runs abort on the dpkg lock and can leave a half-installed package
+# that breaks every later upgrade. Chaining them after cloud-final keeps exactly
+# one package manager active at a time.
 - name: Install systemd units (oneshot; run once on first boot)
   ansible.builtin.copy:
     dest: "/etc/systemd/system/{{ item.name }}"
@@ -57,7 +69,7 @@
         [Unit]
         Description=BigFix first-boot installer
         Wants=network-online.target
-        After=network-online.target
+        After=network-online.target cloud-final.service
         ConditionPathExists=!/var/lib/security-firstboot/bigfix.done
         PartOf=cloud-final.service
 
@@ -74,7 +86,7 @@
         [Unit]
         Description=Rapid7 first-boot installer
         Wants=network-online.target
-        After=network-online.target
+        After=network-online.target cloud-final.service bigfix-firstboot.service
         ConditionPathExists=!/var/lib/security-firstboot/rapid7.done
         PartOf=cloud-final.service
 
@@ -91,7 +103,7 @@
         [Unit]
         Description=Palo Alto Cortex XDR first-boot installer
         Wants=network-online.target
-        After=network-online.target
+        After=network-online.target cloud-final.service rapid7-firstboot.service
         ConditionPathExists=!/var/lib/security-firstboot/cortex-xdr.done
         PartOf=cloud-final.service
 
