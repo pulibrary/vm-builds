@@ -1,9 +1,14 @@
 # docker/ubuntu/Dockerfile
 # syntax = docker/dockerfile:1.4
-FROM ubuntu:22.04
+ARG UBUNTU_VERSION=22.04
+FROM ubuntu:${UBUNTU_VERSION}
+
+ARG ANSIBLE_CORE_VERSION=2.16.3
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
-    container=docker
+    container=docker \
+    ANSIBLE_VENV=/opt/ansible \
+    PATH=/opt/ansible/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Base OS + systemd + useful tools
 RUN apt-get update \
@@ -27,27 +32,32 @@ RUN useradd -m -s /bin/bash pulsys && \
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
 # Optimize systemd for container use
-RUN systemctl mask \
-    systemd-remount-fs.service \
-    sys-kernel-config.mount \
-    sys-kernel-debug.mount \
-    sys-kernel-tracing.mount \
-    e2scrub_reap.service \
-    systemd-pstore.service \
-    systemd-ask-password-wall.path \
-    systemd-update-utmp.service
+RUN for unit in \
+      systemd-remount-fs.service \
+      sys-kernel-config.mount \
+      sys-kernel-debug.mount \
+      sys-kernel-tracing.mount \
+      e2scrub_reap.service \
+      systemd-pstore.service \
+      systemd-ask-password-wall.path \
+      systemd-update-utmp.service; do \
+      systemctl mask "$unit" || echo "skip mask $unit"; \
+    done
 
 # Disable network wait service (major culprit for delays)
-RUN systemctl disable systemd-networkd-wait-online.service
+RUN systemctl disable systemd-networkd-wait-online.service \
+    || echo "skip disable systemd-networkd-wait-online.service"
 
 # Configure journald for minimal overhead
 RUN mkdir -p /etc/systemd/journald.conf.d && \
-    echo -e "[Journal]\nStorage=volatile\nRuntimeMaxUse=8M" > /etc/systemd/journald.conf.d/volatile.conf
+    printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=8M\n' > /etc/systemd/journald.conf.d/volatile.conf
 
-# Ansible bits
-RUN python3 -m pip install --upgrade pip \
-    && python3 -m pip install \
-         ansible-core==2.16.3 \
+# Ansible bits, isolated in a venv so newer Ubuntu releases
+# with externally managed system Python (PEP 668) build cleanly
+RUN python3 -m venv "$ANSIBLE_VENV" \
+    && "$ANSIBLE_VENV/bin/python" -m pip install --upgrade pip setuptools wheel \
+    && "$ANSIBLE_VENV/bin/python" -m pip install \
+         "ansible-core==${ANSIBLE_CORE_VERSION}" \
          pyopenssl
 
 COPY ansible/collections.yaml /tmp/collections.yaml

@@ -81,9 +81,16 @@ just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 ### Docker Images
 
 ```bash
-# Ubuntu 22.04 systemd + Ansible image
-just build-ubuntu-docker          # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
-just push-ubuntu-docker           # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+# Ubuntu 22.04 (jammy) systemd + Ansible image
+just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+
+# Ubuntu 24.04 (noble) systemd + Ansible image
+just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+
+# Both Ubuntu releases in one go
+just build-ubuntu-docker-all
 
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
@@ -197,14 +204,15 @@ packer build -var "gcp_project_id=pul-gcdc" \
 
 In addition to VM images, this repo builds **systemd-capable** Docker images that double as Ansible control hosts. Images are published to **GitHub Container Registry (GHCR)** under:
 
-- `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>` (jammy)
+- `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
 - `ghcr.io/pulibrary/vm-builds/rocky-9:<tag>`
 
 These images:
 
 - Run `systemd` as PID 1 (for testing services with units)
 - Include `pulsys` with passwordless sudo
-- Have Python + Ansible core installed, plus the collections in `ansible/collections.yaml`
+- Have Python + Ansible core installed in a `/opt/ansible` virtualenv, plus the collections in `ansible/collections.yaml`
 
 ### 1. Creating a Token for GHCR
 
@@ -220,7 +228,7 @@ Steps:
    **Settings → Developer settings → Personal access tokens → Tokens (classic)**.
 2. Click **"Generate new token (classic)"**.
 3. Give it a descriptive name, e.g. `vm-builds-ghcr`.
-4. Set an **expiration** that matches your org policy.
+4. Set an **expiration**.
 5. Under **Scopes**, select at least:
    - `read:packages`
    - `write:packages`
@@ -259,25 +267,42 @@ just ghcr-login
 From the repo root:
 
 ```bash
-# Ubuntu 22.04 systemd + Ansible image
-just build-ubuntu-docker          # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
-just push-ubuntu-docker           # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+# Ubuntu 22.04 (jammy) systemd + Ansible image
+just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+
+# Ubuntu 24.04 (noble) systemd + Ansible image
+just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
 ```
 
+Both Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
+with the `UBUNTU_VERSION` build argument, so any future release can be built
+without editing the Dockerfile:
+
+```bash
+just build-ubuntu-docker dev 24.04
+just push-ubuntu-docker  dev 24.04
+```
+
 You can override the tag (e.g., use a date or git SHA):
 
 ```bash
-just build-ubuntu-docker 2025-11-13
-just push-ubuntu-docker  2025-11-13
+just build-jammy-docker 2025-11-13
+just push-jammy-docker  2025-11-13
+
+just build-noble-docker 2025-11-13
+just push-noble-docker  2025-11-13
 ```
 
 Resulting tags:
 
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:2025-11-13`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/rocky-9:2025-11-13`
 
 ### 4. Pulling and Running the Images
@@ -286,6 +311,7 @@ Pull:
 
 ```bash
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/rocky-9:dev
 ```
 

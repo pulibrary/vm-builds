@@ -185,27 +185,57 @@ ghcr-login:
      fi; \
      echo "$token" | docker login ghcr.io -u "$user" --password-stdin
 
-# Build Ubuntu 22.04 systemd-capable Ansible control image
-# Uses docker/ubuntu/Dockerfile
-build-ubuntu-docker tag="dev":
+# Default Ubuntu release used by the docker recipes
+UBUNTU_DOCKER_VERSION := "22.04"
+
+# Build an Ubuntu systemd-capable Ansible control image
+# Uses docker/ubuntu/Dockerfile; version selects the Ubuntu release (22.04, 24.04, ...)
+build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
     docker build \
       -f docker/ubuntu/Dockerfile \
-      -t {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}} \
+      --build-arg UBUNTU_VERSION={{ version }} \
+      -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
       .
 
 # Multi-arch build & push for Ubuntu
-build-ubuntu-docker-multi tag="dev":
+build-ubuntu-docker-multi tag="dev" version=UBUNTU_DOCKER_VERSION:
     docker buildx build \
       --platform linux/amd64,linux/arm64/v8 \
       -f docker/ubuntu/Dockerfile \
-      -t {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}} \
+      --build-arg UBUNTU_VERSION={{ version }} \
+      -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
       --push \
       .
 
 # Push Ubuntu image to GHCR
-push-ubuntu-docker tag="dev":
+push-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
     just ghcr-login
-    docker push {{DOCKER_NAMESPACE}}/ubuntu-22.04:{{tag}}
+    docker push {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}}
+
+# Release-named shortcuts
+build-jammy-docker tag="dev":
+    just build-ubuntu-docker {{ tag }} 22.04
+
+build-noble-docker tag="dev":
+    just build-ubuntu-docker {{ tag }} 24.04
+
+build-jammy-docker-multi tag="dev":
+    just build-ubuntu-docker-multi {{ tag }} 22.04
+
+build-noble-docker-multi tag="dev":
+    just build-ubuntu-docker-multi {{ tag }} 24.04
+
+push-jammy-docker tag="dev":
+    just push-ubuntu-docker {{ tag }} 22.04
+
+push-noble-docker tag="dev":
+    just push-ubuntu-docker {{ tag }} 24.04
+
+# Build both supported Ubuntu releases
+build-ubuntu-docker-all tag="dev":
+    just build-jammy-docker {{ tag }}
+    just build-noble-docker {{ tag }}
+    @echo "DOCKER: Built Ubuntu 22.04 and 24.04 images tagged {{ tag }}."
 
 # Multi-arch build & push for Rocky
 build-rocky-docker-multi tag="dev":
