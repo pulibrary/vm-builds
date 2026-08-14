@@ -237,6 +237,37 @@ build-ubuntu-docker-all tag="dev":
     just build-noble-docker {{ tag }}
     @echo "DOCKER: Built Ubuntu 22.04 and 24.04 images tagged {{ tag }}."
 
+# Alias a built Ubuntu image so the short local name, the fully
+# qualified GHCR name, and the GHCR :latest tag all point at it
+link-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
+    @short="ubuntu-{{ version }}:{{ tag }}"; \
+     full="{{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{ tag }}"; \
+     if ! docker image inspect "$full" >/dev/null 2>&1 \
+        && ! docker image inspect "$short" >/dev/null 2>&1; then \
+       echo "DOCKER: $full not found locally, building it first."; \
+       just build-ubuntu-docker {{ tag }} {{ version }}; \
+     fi; \
+     if docker image inspect "$full" >/dev/null 2>&1; then \
+       src="$full"; \
+     else \
+       src="$short"; \
+     fi; \
+     docker tag "$src" "$short"; \
+     docker tag "$src" "$full"; \
+     docker tag "$src" "{{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest"; \
+     echo "DOCKER: linked $src -> $short, $full, {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest"
+
+link-jammy-docker tag="dev":
+    just link-ubuntu-docker {{ tag }} 22.04
+
+link-noble-docker tag="dev":
+    just link-ubuntu-docker {{ tag }} 24.04
+
+# Link both supported Ubuntu releases
+link-ubuntu-docker-all tag="dev":
+    just link-jammy-docker {{ tag }}
+    just link-noble-docker {{ tag }}
+
 # Multi-arch build & push for Rocky
 build-rocky-docker-multi tag="dev":
     docker buildx build \

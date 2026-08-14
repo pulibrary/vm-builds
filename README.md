@@ -305,6 +305,20 @@ Resulting tags:
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/rocky-9:2025-11-13`
 
+To alias a built image so the short local name, the fully qualified GHCR
+name, and the GHCR `:latest` tag all point at the same image:
+
+```bash
+# ubuntu-22.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-22.04
+just link-jammy-docker
+
+# ubuntu-24.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-24.04
+just link-noble-docker
+
+# both releases at once
+just link-ubuntu-docker-all
+```
+
 ### 4. Pulling and Running the Images
 
 Pull:
