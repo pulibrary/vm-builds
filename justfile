@@ -219,11 +219,17 @@ build-jammy-docker tag="dev":
 build-noble-docker tag="dev":
     just build-ubuntu-docker {{ tag }} 24.04
 
+build-resolute-docker tag="dev":
+    just build-ubuntu-docker {{ tag }} 26.04
+
 build-jammy-docker-multi tag="dev":
     just build-ubuntu-docker-multi {{ tag }} 22.04
 
 build-noble-docker-multi tag="dev":
     just build-ubuntu-docker-multi {{ tag }} 24.04
+
+build-resolute-docker-multi tag="dev":
+    just build-ubuntu-docker-multi {{ tag }} 26.04
 
 push-jammy-docker tag="dev":
     just push-ubuntu-docker {{ tag }} 22.04
@@ -231,11 +237,15 @@ push-jammy-docker tag="dev":
 push-noble-docker tag="dev":
     just push-ubuntu-docker {{ tag }} 24.04
 
-# Build both supported Ubuntu releases
+push-resolute-docker tag="dev":
+    just push-ubuntu-docker {{ tag }} 26.04
+
+# Build all supported Ubuntu releases
 build-ubuntu-docker-all tag="dev":
     just build-jammy-docker {{ tag }}
     just build-noble-docker {{ tag }}
-    @echo "DOCKER: Built Ubuntu 22.04 and 24.04 images tagged {{ tag }}."
+    just build-resolute-docker {{ tag }}
+    @echo "DOCKER: Built Ubuntu 22.04, 24.04 and 26.04 images tagged {{ tag }}."
 
 # Alias a built Ubuntu image so the short local name, the fully
 # qualified GHCR name, and the GHCR :latest tag all point at it
@@ -263,10 +273,14 @@ link-jammy-docker tag="dev":
 link-noble-docker tag="dev":
     just link-ubuntu-docker {{ tag }} 24.04
 
-# Link both supported Ubuntu releases
+link-resolute-docker tag="dev":
+    just link-ubuntu-docker {{ tag }} 26.04
+
+# Link all supported Ubuntu releases
 link-ubuntu-docker-all tag="dev":
     just link-jammy-docker {{ tag }}
     just link-noble-docker {{ tag }}
+    just link-resolute-docker {{ tag }}
 
 # Multi-arch build & push for Rocky
 build-rocky-docker-multi tag="dev":
