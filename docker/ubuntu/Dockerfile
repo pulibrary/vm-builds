@@ -7,10 +7,13 @@ ARG ANSIBLE_CORE_VERSION=2.16.3
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     container=docker \
-    ANSIBLE_VENV=/opt/ansible \
-    PATH=/opt/ansible/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    ANSIBLE_VENV=/opt/ansible
 
-# Base OS + systemd + useful tools
+# Base OS + systemd + useful tools.
+# The apt lists are deliberately kept: this image is used as an Ansible target
+# in tests, and dropping them makes plain `apt` tasks fail with
+# "No package matching '<name>' is available" unless every task remembers
+# update_cache: true.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        systemd systemd-sysv \
@@ -18,10 +21,11 @@ RUN apt-get update \
        openssh-server \
        net-tools \
        ca-certificates \
+       gnupg \
        python3 \
+       python3-apt \
        python3-venv \
-       python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+       python3-pip
 
 # pulsys admin user
 RUN useradd -m -s /bin/bash pulsys && \
@@ -31,7 +35,10 @@ RUN useradd -m -s /bin/bash pulsys && \
 # Prepare systemd dirs
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
-# Optimize systemd for container use
+# Optimize systemd for container use.
+# tmp.mount and systemd-tmpfiles-clean are masked so systemd can never remount
+# or sweep /tmp while a playbook is running against this container; that would
+# silently delete files a controller has already written there.
 RUN for unit in \
       systemd-remount-fs.service \
       sys-kernel-config.mount \
@@ -40,7 +47,10 @@ RUN for unit in \
       e2scrub_reap.service \
       systemd-pstore.service \
       systemd-ask-password-wall.path \
-      systemd-update-utmp.service; do \
+      systemd-update-utmp.service \
+      tmp.mount \
+      systemd-tmpfiles-clean.timer \
+      systemd-tmpfiles-clean.service; do \
       systemctl mask "$unit" || echo "skip mask $unit"; \
     done
 
@@ -48,17 +58,36 @@ RUN for unit in \
 RUN systemctl disable systemd-networkd-wait-online.service \
     || echo "skip disable systemd-networkd-wait-online.service"
 
+# Stop systemd from emptying /tmp and /var/tmp while a playbook is running.
+# The shipped /usr/lib/tmpfiles.d/tmp.conf uses "D", which tells
+# systemd-tmpfiles-setup.service (running --create --remove --boot) to delete
+# everything under /tmp during boot. A controller that connects while the
+# container is still booting can have its staged files deleted mid-task, which
+# fails as "can't open file .../AnsiballZ_setup.py: No such file or directory".
+# A file of the same name in /etc/tmpfiles.d overrides the shipped one, and
+# lowercase "d" creates the directory without ever removing its contents.
+RUN mkdir -p /etc/tmpfiles.d \
+    && printf 'd /tmp 1777 root root -\nd /var/tmp 1777 root root -\n' \
+       > /etc/tmpfiles.d/tmp.conf
+
 # Configure journald for minimal overhead
 RUN mkdir -p /etc/systemd/journald.conf.d && \
     printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=8M\n' > /etc/systemd/journald.conf.d/volatile.conf
 
 # Ansible bits, isolated in a venv so newer Ubuntu releases
-# with externally managed system Python (PEP 668) build cleanly
+# with externally managed system Python (PEP 668) build cleanly.
+# The venv is deliberately kept off PATH: Ansible discovers a target's
+# interpreter with `command -v python3`, and a venv python cannot see
+# system packages such as python3-apt. Only the ansible entry points are
+# exposed, so this image still works as an Ansible control host.
 RUN python3 -m venv "$ANSIBLE_VENV" \
     && "$ANSIBLE_VENV/bin/python" -m pip install --upgrade pip setuptools wheel \
     && "$ANSIBLE_VENV/bin/python" -m pip install \
          "ansible-core==${ANSIBLE_CORE_VERSION}" \
-         pyopenssl
+         pyopenssl \
+    && for bin in "$ANSIBLE_VENV"/bin/ansible*; do \
+         ln -sf "$bin" "/usr/local/bin/$(basename "$bin")"; \
+       done
 
 COPY ansible/collections.yaml /tmp/collections.yaml
 RUN ansible-galaxy collection install -r /tmp/collections.yaml \
@@ -67,11 +96,19 @@ RUN ansible-galaxy collection install -r /tmp/collections.yaml \
 RUN mkdir -p /etc/ansible \
     && printf "[local]\nlocalhost ansible_connection=local\n" > /etc/ansible/hosts
 
-RUN mkdir -p /root/.ansible/tmp /tmp/ansible \
-    && chmod -R 777 /root/.ansible/tmp \
-    && chmod -R 1777 /tmp/ansible
+# Somewhere for an Ansible controller to stage modules. Both paths are plain
+# directories in the image, never mount points, so a controller can write here
+# and then execute what it wrote. Putting Ansible's remote_tmp on a tmpfs or
+# volume mount instead is unreliable and shows up as
+# "can't open file .../AnsiballZ_setup.py: No such file or directory".
+RUN mkdir -p /root/.ansible/tmp /var/tmp/ansible \
+    && chmod 700 /root/.ansible/tmp \
+    && chmod 1777 /var/tmp/ansible
 
 EXPOSE 22
 STOPSIGNAL SIGRTMIN+3
-VOLUME ["/sys/fs/cgroup", "/run", "/tmp"]
+# No VOLUME here on purpose. Declaring /run, /tmp or /sys/fs/cgroup as volumes
+# creates anonymous volumes that shadow whatever the caller mounts and makes
+# copying files into those paths behave inconsistently between Docker and
+# Podman. Callers mount what they need (see README).
 CMD ["/sbin/init"]
