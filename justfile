@@ -176,10 +176,15 @@ DOCKER_NAMESPACE := "ghcr.io/pulibrary/vm-builds"
 
 # Login helper.
 # Uses (in order): GHCR_PAT, GITHUB_TOKEN, GH_TOKEN
+# If no token is set but you are already logged in to ghcr.io, that is reused.
 ghcr-login:
     @user="${GITHUB_ACTOR:-pulibrary}"; \
      token="${GHCR_PAT:-${GITHUB_TOKEN:-$GH_TOKEN}}"; \
      if [ -z "$token" ]; then \
+       if docker login ghcr.io --get-login >/dev/null 2>&1; then \
+         echo "GHCR: reusing existing docker login for $(docker login ghcr.io --get-login)"; \
+         exit 0; \
+       fi; \
        echo "ERROR: Set GHCR_PAT (or GITHUB_TOKEN / GH_TOKEN) before running this." >&2; \
        exit 1; \
      fi; \
@@ -198,19 +203,25 @@ build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
       .
 
 # Multi-arch build & push for Ubuntu
+# Publishes both the given tag and :latest so `docker pull` without a tag works
 build-ubuntu-docker-multi tag="dev" version=UBUNTU_DOCKER_VERSION:
+    just ghcr-login
     docker buildx build \
       --platform linux/amd64,linux/arm64/v8 \
       -f docker/ubuntu/Dockerfile \
       --build-arg UBUNTU_VERSION={{ version }} \
       -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
+      -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest \
       --push \
       .
 
-# Push Ubuntu image to GHCR
+# Push Ubuntu image to GHCR, including the :latest tag so that
+# `docker pull ghcr.io/pulibrary/vm-builds/ubuntu-<version>` resolves
 push-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
+    just link-ubuntu-docker {{ tag }} {{ version }}
     just ghcr-login
     docker push {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}}
+    docker push {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest
 
 # Release-named shortcuts
 build-jammy-docker tag="dev":
@@ -246,6 +257,13 @@ build-ubuntu-docker-all tag="dev":
     just build-noble-docker {{ tag }}
     just build-resolute-docker {{ tag }}
     @echo "DOCKER: Built Ubuntu 22.04, 24.04 and 26.04 images tagged {{ tag }}."
+
+# Push all supported Ubuntu releases (builds and links whatever is missing)
+push-ubuntu-docker-all tag="dev":
+    just push-jammy-docker {{ tag }}
+    just push-noble-docker {{ tag }}
+    just push-resolute-docker {{ tag }}
+    @echo "DOCKER: Pushed Ubuntu 22.04, 24.04 and 26.04 images tagged {{ tag }} and latest."
 
 # Alias a built Ubuntu image so the short local name, the fully
 # qualified GHCR name, and the GHCR :latest tag all point at it
