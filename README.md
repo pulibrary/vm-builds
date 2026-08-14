@@ -89,7 +89,11 @@ just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22
 just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 
-# Both Ubuntu releases in one go
+# Ubuntu 26.04 (resolute) systemd + Ansible image
+just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+
+# All Ubuntu releases in one go
 just build-ubuntu-docker-all
 
 # Rocky 9 systemd + Ansible image
@@ -206,6 +210,7 @@ In addition to VM images, this repo builds **systemd-capable** Docker images tha
 
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>` (jammy)
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
+- `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:<tag>` (resolute)
 - `ghcr.io/pulibrary/vm-builds/rocky-9:<tag>`
 
 These images:
@@ -275,18 +280,22 @@ just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22
 just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 
+# Ubuntu 26.04 (resolute) systemd + Ansible image
+just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
 ```
 
-Both Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
+All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
 with the `UBUNTU_VERSION` build argument, so any future release can be built
 without editing the Dockerfile:
 
 ```bash
-just build-ubuntu-docker dev 24.04
-just push-ubuntu-docker  dev 24.04
+just build-ubuntu-docker dev 26.04
+just push-ubuntu-docker  dev 26.04
 ```
 
 You can override the tag (e.g., use a date or git SHA):
@@ -297,16 +306,21 @@ just push-jammy-docker  2025-11-13
 
 just build-noble-docker 2025-11-13
 just push-noble-docker  2025-11-13
+
+just build-resolute-docker 2025-11-13
+just push-resolute-docker  2025-11-13
 ```
 
 Resulting tags:
 
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:2025-11-13`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/rocky-9:2025-11-13`
 
 To alias a built image so the short local name, the fully qualified GHCR
-name, and the GHCR `:latest` tag all point at the same image:
+name, and the GHCR `:latest` tag all point at the same image (the image is
+built first if it is not present locally):
 
 ```bash
 # ubuntu-22.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-22.04
@@ -315,7 +329,10 @@ just link-jammy-docker
 # ubuntu-24.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-24.04
 just link-noble-docker
 
-# both releases at once
+# ubuntu-26.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-26.04
+just link-resolute-docker
+
+# all releases at once
 just link-ubuntu-docker-all
 ```
 
@@ -326,6 +343,7 @@ Pull:
 ```bash
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/rocky-9:dev
 ```
 
