@@ -322,6 +322,11 @@ example Prancible's Molecule suite), so a few things are guaranteed:
   `/opt/ansible` virtualenv that is deliberately kept off `PATH`.
 - `/root/.ansible/tmp` (Ansible's default `remote_tmp`) and `/var/tmp/ansible`
   are pre-created and are ordinary directories, never mount points.
+- **`pip3` accepts `--break-system-packages` on every release.** Ubuntu 22.04
+  ships a pip too old to know that flag, while 24.04 and later require it to
+  install into the system environment, so the same `ansible.builtin.pip` task
+  would fail on 22.04 only. The 22.04 image upgrades its system pip to close
+  that gap; newer releases keep their distro-managed pip.
 
 ### Architecture matters
 
