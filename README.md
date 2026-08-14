@@ -265,7 +265,8 @@ Or, using just:
 just ghcr-login
 ```
 
-(Uses `GHCR_PAT` / `GITHUB_TOKEN` / `GH_TOKEN` under the hood.)
+(Uses `GHCR_PAT` / `GITHUB_TOKEN` / `GH_TOKEN` under the hood. If no token is
+set but you are already logged in to `ghcr.io`, the existing login is reused.)
 
 ### 3. Building and Pushing Images (Local)
 
@@ -287,6 +288,16 @@ just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
+
+# Push all Ubuntu releases at once
+just push-ubuntu-docker-all
+```
+
+Each Ubuntu `push-*` recipe builds and links the image if needed, then
+publishes both `:<tag>` and `:latest`, so an untagged pull resolves:
+
+```bash
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04
 ```
 
 All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
