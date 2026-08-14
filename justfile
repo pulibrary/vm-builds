@@ -193,35 +193,107 @@ ghcr-login:
 # Default Ubuntu release used by the docker recipes
 UBUNTU_DOCKER_VERSION := "22.04"
 
-# Build an Ubuntu systemd-capable Ansible control image
-# Uses docker/ubuntu/Dockerfile; version selects the Ubuntu release (22.04, 24.04, ...)
-build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
+# Architectures published for the container images. Multi-arch is the default
+# so one tag runs on CI (amd64) and on developer laptops (arm64) alike.
+DOCKER_PLATFORMS := "linux/amd64,linux/arm64"
+
+# Architecture that downstream CI (GitHub Actions, molecule) runs on.
+# Publishing an image without it makes every command in the container fail
+# with "Exec format error", which surfaces downstream as confusing Ansible
+# errors such as "Failed to create temporary directory".
+DOCKER_CI_ARCH := "amd64"
+
+# Verify cross-architecture emulation works before starting a long multi-arch
+# build, so failures are immediate and obvious rather than 10 minutes deep.
+check-emulation platforms=DOCKER_PLATFORMS:
+    @probe=docker.io/library/alpine:3; \
+     docker pull -q "$probe" >/dev/null 2>&1 || true; \
+     for platform in $(echo "{{ platforms }}" | tr ',' ' '); do \
+       if ! docker run --rm --platform "$platform" "$probe" true >/dev/null 2>&1; then \
+         echo "ERROR: this host cannot run $platform images." >&2; \
+         echo "       Multi-arch builds need working binfmt/qemu emulation." >&2; \
+         echo "       Options:" >&2; \
+         echo "         - let CI publish it: the ubuntu-docker workflow builds each" >&2; \
+         echo "           architecture on a native runner (no emulation needed)" >&2; \
+         echo "         - install emulation: docker run --privileged --rm \\" >&2; \
+         echo "             docker.io/tonistiigi/binfmt --install all" >&2; \
+         echo "         - build for this host only: just build-ubuntu-docker-native" >&2; \
+         exit 1; \
+       fi; \
+     done; \
+     echo "DOCKER: emulation OK for {{ platforms }}"
+
+# Drop any existing tag with this name so a manifest list can take it over.
+# Building a manifest fails if the name is already a plain single-arch image,
+# which is common after a native build.
+_free-image-name ref:
+    @if docker manifest exists "{{ ref }}" 2>/dev/null; then \
+       docker manifest rm "{{ ref }}" >/dev/null; \
+     elif docker image exists "{{ ref }}" 2>/dev/null; then \
+       docker untag "{{ ref }}" >/dev/null; \
+     fi
+
+# Build an Ubuntu systemd-capable Ansible control image.
+# Uses docker/ubuntu/Dockerfile; version selects the Ubuntu release.
+# Produces a multi-arch manifest by default.
+build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION platforms=DOCKER_PLATFORMS:
+    just check-emulation {{ platforms }}
+    just _free-image-name {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}}
+    @for platform in $(echo "{{ platforms }}" | tr ',' ' '); do \
+       echo "DOCKER: building Ubuntu {{ version }} for $platform"; \
+       docker build \
+         --platform "$platform" \
+         -f docker/ubuntu/Dockerfile \
+         --build-arg UBUNTU_VERSION={{ version }} \
+         --manifest {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
+         . || exit 1; \
+     done
+
+# Build for the host architecture only. Fast for local iteration; never
+# publish the result, since other architectures cannot run it.
+build-ubuntu-docker-native tag="dev" version=UBUNTU_DOCKER_VERSION:
     docker build \
       -f docker/ubuntu/Dockerfile \
       --build-arg UBUNTU_VERSION={{ version }} \
       -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
       .
 
-# Multi-arch build & push for Ubuntu
-# Publishes both the given tag and :latest so `docker pull` without a tag works
+# Kept for discoverability; multi-arch is now the default
 build-ubuntu-docker-multi tag="dev" version=UBUNTU_DOCKER_VERSION:
-    just ghcr-login
-    docker buildx build \
-      --platform linux/amd64,linux/arm64/v8 \
-      -f docker/ubuntu/Dockerfile \
-      --build-arg UBUNTU_VERSION={{ version }} \
-      -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
-      -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest \
-      --push \
-      .
+    just build-ubuntu-docker {{ tag }} {{ version }}
 
 # Push Ubuntu image to GHCR, including the :latest tag so that
-# `docker pull ghcr.io/pulibrary/vm-builds/ubuntu-<version>` resolves
-push-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION:
+# `docker pull ghcr.io/pulibrary/vm-builds/ubuntu-<version>` resolves.
+# Refuses to publish anything that cannot run on the CI architecture;
+# pass force=true only if you know every consumer matches your host.
+push-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION force="false":
     just link-ubuntu-docker {{ tag }} {{ version }}
+    @ref="{{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{ tag }}"; \
+     if docker manifest exists "$ref" 2>/dev/null; then \
+       archs=$(docker manifest inspect "$ref" | grep '"architecture"' | cut -d'"' -f4 | sort -u | tr '\n' ' '); \
+     else \
+       archs=$(docker image inspect "$ref" | grep -m1 '"Architecture"' | cut -d'"' -f4); \
+     fi; \
+     case " $archs " in \
+       *" {{ DOCKER_CI_ARCH }} "*) ;; \
+       *) if [ "{{ force }}" != "true" ]; then \
+            echo "ERROR: $ref covers [$archs] but downstream CI needs {{ DOCKER_CI_ARCH }}." >&2; \
+            echo "       Publishing it would break molecule with 'Exec format error'." >&2; \
+            echo "       Rebuild multi-arch: just build-ubuntu-docker {{ tag }} {{ version }}" >&2; \
+            echo "       or let the ubuntu-docker GitHub Actions workflow publish it." >&2; \
+            echo "       To override: just push-ubuntu-docker {{ tag }} {{ version }} true" >&2; \
+            exit 1; \
+          fi;; \
+     esac
     just ghcr-login
-    docker push {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}}
-    docker push {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:latest
+    @ref="{{DOCKER_NAMESPACE}}/ubuntu-{{ version }}"; \
+     for dest in "{{ tag }}" latest; do \
+       if docker manifest exists "$ref:{{ tag }}" 2>/dev/null; then \
+         docker manifest push --all "$ref:{{ tag }}" "docker://$ref:$dest"; \
+       else \
+         docker push "$ref:$dest"; \
+       fi; \
+     done
 
 # Release-named shortcuts
 build-jammy-docker tag="dev":
@@ -241,6 +313,15 @@ build-noble-docker-multi tag="dev":
 
 build-resolute-docker-multi tag="dev":
     just build-ubuntu-docker-multi {{ tag }} 26.04
+
+build-jammy-docker-native tag="dev":
+    just build-ubuntu-docker-native {{ tag }} 22.04
+
+build-noble-docker-native tag="dev":
+    just build-ubuntu-docker-native {{ tag }} 24.04
+
+build-resolute-docker-native tag="dev":
+    just build-ubuntu-docker-native {{ tag }} 26.04
 
 push-jammy-docker tag="dev":
     just push-ubuntu-docker {{ tag }} 22.04
@@ -300,24 +381,75 @@ link-ubuntu-docker-all tag="dev":
     just link-noble-docker {{ tag }}
     just link-resolute-docker {{ tag }}
 
-# Multi-arch build & push for Rocky
-build-rocky-docker-multi tag="dev":
-    docker buildx build \
-      --platform linux/amd64,linux/arm64/v8 \
-      -f docker/rocky/Dockerfile \
-      -t {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
-      --push \
-      .
+# Multi-arch build for Rocky (default). Publishing is a separate step so a
+# failed build can never leave a half-published tag behind.
+build-rocky-docker tag="dev" platforms=DOCKER_PLATFORMS:
+    just check-emulation {{ platforms }}
+    just _free-image-name {{DOCKER_NAMESPACE}}/rocky-9:{{tag}}
+    @for platform in $(echo "{{ platforms }}" | tr ',' ' '); do \
+       echo "DOCKER: building Rocky 9 for $platform"; \
+       docker build \
+         --platform "$platform" \
+         -f docker/rocky/Dockerfile \
+         --manifest {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
+         . || exit 1; \
+     done
 
-# Build Rocky 9 systemd-capable Ansible control image
-# Uses docker/rocky/Dockerfile
-build-rocky-docker tag="dev":
+# Build Rocky for the host architecture only (local iteration)
+build-rocky-docker-native tag="dev":
     docker build \
       -f docker/rocky/Dockerfile \
       -t {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
       .
 
-# Push Rocky image to GHCR
-push-rocky-docker tag="dev":
+# Kept for discoverability; multi-arch is now the default
+build-rocky-docker-multi tag="dev":
+    just build-rocky-docker {{ tag }}
+
+# Alias a built Rocky image so the short local name, the fully qualified
+# GHCR name, and the GHCR :latest tag all point at it
+link-rocky-docker tag="dev":
+    @short="rocky-9:{{ tag }}"; \
+     full="{{DOCKER_NAMESPACE}}/rocky-9:{{ tag }}"; \
+     if ! docker image inspect "$full" >/dev/null 2>&1 \
+        && ! docker image inspect "$short" >/dev/null 2>&1; then \
+       echo "DOCKER: $full not found locally, building it first."; \
+       just build-rocky-docker {{ tag }}; \
+     fi; \
+     if docker image inspect "$full" >/dev/null 2>&1; then \
+       src="$full"; \
+     else \
+       src="$short"; \
+     fi; \
+     docker tag "$src" "$short"; \
+     docker tag "$src" "$full"; \
+     docker tag "$src" "{{DOCKER_NAMESPACE}}/rocky-9:latest"; \
+     echo "DOCKER: linked $src -> $short, $full, {{DOCKER_NAMESPACE}}/rocky-9:latest"
+
+# Push Rocky image to GHCR, including :latest so an untagged pull resolves
+push-rocky-docker tag="dev" force="false":
+    just link-rocky-docker {{ tag }}
+    @ref="{{DOCKER_NAMESPACE}}/rocky-9:{{ tag }}"; \
+     if docker manifest exists "$ref" 2>/dev/null; then \
+       archs=$(docker manifest inspect "$ref" | grep '"architecture"' | cut -d'"' -f4 | sort -u | tr '\n' ' '); \
+     else \
+       archs=$(docker image inspect "$ref" | grep -m1 '"Architecture"' | cut -d'"' -f4); \
+     fi; \
+     case " $archs " in \
+       *" {{ DOCKER_CI_ARCH }} "*) ;; \
+       *) if [ "{{ force }}" != "true" ]; then \
+            echo "ERROR: $ref covers [$archs] but downstream CI needs {{ DOCKER_CI_ARCH }}." >&2; \
+            echo "       Rebuild multi-arch: just build-rocky-docker {{ tag }}" >&2; \
+            echo "       To override: just push-rocky-docker {{ tag }} true" >&2; \
+            exit 1; \
+          fi;; \
+     esac
     just ghcr-login
-    docker push {{DOCKER_NAMESPACE}}/rocky-9:{{tag}}
+    @ref="{{DOCKER_NAMESPACE}}/rocky-9"; \
+     for dest in "{{ tag }}" latest; do \
+       if docker manifest exists "$ref:{{ tag }}" 2>/dev/null; then \
+         docker manifest push --all "$ref:{{ tag }}" "docker://$ref:$dest"; \
+       else \
+         docker push "$ref:$dest"; \
+       fi; \
+     done

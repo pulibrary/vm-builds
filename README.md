@@ -300,6 +300,65 @@ publishes both `:<tag>` and `:latest`, so an untagged pull resolves:
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04
 ```
 
+### Using these images as Ansible targets
+
+These images are built to be driven by an external Ansible controller (for
+example Prancible's Molecule suite), so a few things are guaranteed:
+
+- **`apt`/`dnf` metadata is kept in the image.** Package tasks work without
+  `update_cache: true`; dropping the lists makes tasks fail with
+  `No package matching '<name>' is available`.
+- **Nothing sweeps `/tmp`.** The distro ships a systemd-tmpfiles rule that
+  empties `/tmp` during boot. A controller connecting while the container is
+  still booting could have its staged module deleted mid-task, failing with
+  `can't open file .../AnsiballZ_setup.py: No such file or directory`. These
+  images override that rule so `/tmp` contents are never removed.
+- **No `VOLUME` declarations.** `/run`, `/tmp` and `/sys/fs/cgroup` are left to
+  the caller to mount. Declaring them as volumes creates anonymous volumes that
+  shadow the caller's mounts and makes copying files into those paths behave
+  differently under Docker and Podman.
+- **`python3` resolves to the system interpreter**, so modules that need
+  system packages such as `python3-apt` work. Ansible itself lives in a
+  `/opt/ansible` virtualenv that is deliberately kept off `PATH`.
+- `/root/.ansible/tmp` (Ansible's default `remote_tmp`) and `/var/tmp/ansible`
+  are pre-created and are ordinary directories, never mount points.
+
+### Architecture matters
+
+Downstream consumers (Prancible's molecule suite on GitHub Actions) run on
+**amd64**, while developer laptops are usually **arm64**. A container image
+only runs on the architecture it was built for; publishing an arm64-only image
+makes every command inside it fail with `Exec format error`, which surfaces
+downstream as misleading Ansible errors such as "Failed to create temporary
+directory".
+
+Because of this, **all Ubuntu and Rocky build recipes produce a multi-arch
+(amd64 + arm64) manifest by default**, and the `push-*` recipes refuse to
+publish anything that does not include amd64.
+
+```bash
+# multi-arch (default)
+just build-jammy-docker
+just build-rocky-docker
+
+# host architecture only: fast local iteration, never publish this
+just build-jammy-docker-native
+just build-rocky-docker-native
+```
+
+Multi-arch builds need working cross-architecture emulation. The recipes
+check this up front and fail in seconds rather than minutes:
+
+```bash
+just check-emulation
+# install emulation if it is missing:
+docker run --privileged --rm docker.io/tonistiigi/binfmt --install all
+```
+
+If emulation is unavailable, let CI publish instead: the **container-images**
+GitHub Actions workflow builds every Ubuntu release and Rocky 9 on a native
+amd64 and arm64 runner, so no emulation is involved.
+
 All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
 with the `UBUNTU_VERSION` build argument, so any future release can be built
 without editing the Dockerfile:
