@@ -27,6 +27,16 @@ RUN apt-get update \
        python3-venv \
        python3-pip
 
+# Make the system pip behave the same on every release. Ubuntu 22.04 ships
+# pip 22.0.2, which predates `--break-system-packages` (added in pip 23.0),
+# while 24.04 and later ship a pip that requires that flag to touch the system
+# environment. Without this, a playbook that works against newer releases fails
+RUN pip_major=$(/usr/bin/pip3 --version | awk '{print $2}' | cut -d. -f1) \
+    && if [ "$pip_major" -lt 23 ]; then \
+         /usr/bin/pip3 install --no-cache-dir --upgrade 'pip>=23.1'; \
+       fi \
+    && /usr/bin/pip3 --version
+
 # pulsys admin user
 RUN useradd -m -s /bin/bash pulsys && \
     echo "pulsys ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys && \
