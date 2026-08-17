@@ -3,17 +3,17 @@
 ARG UBUNTU_VERSION=22.04
 FROM ubuntu:${UBUNTU_VERSION}
 
-ARG ANSIBLE_CORE_VERSION=2.16.3
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
-    container=docker \
-    ANSIBLE_VENV=/opt/ansible
+    container=docker
 
 # Base OS + systemd + useful tools.
-# The apt lists are deliberately kept: this image is used as an Ansible target
-# in tests, and dropping them makes plain `apt` tasks fail with
-# "No package matching '<name>' is available" unless every task remembers
-# update_cache: true.
+# Ansible is deliberately NOT installed: this image is a managed node, not a
+# control host. The controller ships its own module code over the connection,
+# so all a target needs is a Python interpreter.
+# The apt lists are deliberately kept: dropping them makes plain `apt` tasks
+# fail with "No package matching '<name>' is available" unless every task
+# remembers update_cache: true.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        systemd systemd-sysv \
@@ -31,6 +31,8 @@ RUN apt-get update \
 # pip 22.0.2, which predates `--break-system-packages` (added in pip 23.0),
 # while 24.04 and later ship a pip that requires that flag to touch the system
 # environment. Without this, a playbook that works against newer releases fails
+# on 22.04 with "no such option: --break-system-packages". Only older pips are
+# upgraded, so newer releases keep their distro-managed pip.
 RUN pip_major=$(/usr/bin/pip3 --version | awk '{print $2}' | cut -d. -f1) \
     && if [ "$pip_major" -lt 23 ]; then \
          /usr/bin/pip3 install --no-cache-dir --upgrade 'pip>=23.1'; \
@@ -84,29 +86,7 @@ RUN mkdir -p /etc/tmpfiles.d \
 RUN mkdir -p /etc/systemd/journald.conf.d && \
     printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=8M\n' > /etc/systemd/journald.conf.d/volatile.conf
 
-# Ansible bits, isolated in a venv so newer Ubuntu releases
-# with externally managed system Python (PEP 668) build cleanly.
-# The venv is deliberately kept off PATH: Ansible discovers a target's
-# interpreter with `command -v python3`, and a venv python cannot see
-# system packages such as python3-apt. Only the ansible entry points are
-# exposed, so this image still works as an Ansible control host.
-RUN python3 -m venv "$ANSIBLE_VENV" \
-    && "$ANSIBLE_VENV/bin/python" -m pip install --upgrade pip setuptools wheel \
-    && "$ANSIBLE_VENV/bin/python" -m pip install \
-         "ansible-core==${ANSIBLE_CORE_VERSION}" \
-         pyopenssl \
-    && for bin in "$ANSIBLE_VENV"/bin/ansible*; do \
-         ln -sf "$bin" "/usr/local/bin/$(basename "$bin")"; \
-       done
-
-COPY ansible/collections.yaml /tmp/collections.yaml
-RUN ansible-galaxy collection install -r /tmp/collections.yaml \
-    && rm -f /tmp/collections.yaml
-
-RUN mkdir -p /etc/ansible \
-    && printf "[local]\nlocalhost ansible_connection=local\n" > /etc/ansible/hosts
-
-# Somewhere for an Ansible controller to stage modules. Both paths are plain
+# Somewhere for a controller to stage modules. Both paths are plain
 # directories in the image, never mount points, so a controller can write here
 # and then execute what it wrote. Putting Ansible's remote_tmp on a tmpfs or
 # volume mount instead is unreliable and shows up as

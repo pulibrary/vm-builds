@@ -4,6 +4,9 @@ FROM rockylinux:9
 ENV TZ=UTC \
     container=docker
 
+# Ansible is deliberately NOT installed: this image is a managed node, not a
+# control host. The controller ships its own module code over the connection,
+# so all a target needs is a Python interpreter.
 RUN dnf -y update \
     && dnf -y install \
        systemd \
@@ -22,20 +25,7 @@ RUN useradd -m -s /bin/bash pulsys && \
 
 RUN mkdir -p /run/systemd /var/log/journal /var/run/sshd
 
-# ansible-core 2.15.x works with Python 3.9
-RUN python3 -m pip install --upgrade pip \
-    && python3 -m pip install \
-         ansible-core==2.15.13 \
-         pyopenssl
-
-COPY ansible/collections.yaml /tmp/collections.yaml
-RUN ansible-galaxy collection install -r /tmp/collections.yaml \
-    && rm -f /tmp/collections.yaml
-
-RUN mkdir -p /etc/ansible \
-    && printf "[local]\nlocalhost ansible_connection=local\n" > /etc/ansible/hosts
-
-# Somewhere for an Ansible controller to stage modules. Both paths are plain
+# Somewhere for a controller to stage modules. Both paths are plain
 # directories in the image, never mount points, so a controller can write here
 # and then execute what it wrote. Putting Ansible's remote_tmp on a tmpfs or
 # volume mount instead is unreliable and shows up as

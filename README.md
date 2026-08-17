@@ -206,7 +206,7 @@ packer build -var "gcp_project_id=pul-gcdc" \
 
 ## Docker Images (systemd-capable, on GHCR)
 
-In addition to VM images, this repo builds **systemd-capable** Docker images that double as Ansible control hosts. Images are published to **GitHub Container Registry (GHCR)** under:
+In addition to VM images, this repo builds **systemd-capable** Docker images used as **Ansible managed nodes** (test targets). Images are published to **GitHub Container Registry (GHCR)** under:
 
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>` (jammy)
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
@@ -217,7 +217,12 @@ These images:
 
 - Run `systemd` as PID 1 (for testing services with units)
 - Include `pulsys` with passwordless sudo
-- Have Python + Ansible core installed in a `/opt/ansible` virtualenv, plus the collections in `ansible/collections.yaml`
+- Provide a system Python interpreter, which is all an Ansible target needs
+
+Ansible itself is **not** installed. These are managed nodes, not control
+hosts: the controller ships its own module code over the connection, so
+installing Ansible in the target would only add weight and a second
+version to keep in sync.
 
 ### 1. Creating a Token for GHCR
 
@@ -318,8 +323,7 @@ example Prancible's Molecule suite), so a few things are guaranteed:
   shadow the caller's mounts and makes copying files into those paths behave
   differently under Docker and Podman.
 - **`python3` resolves to the system interpreter**, so modules that need
-  system packages such as `python3-apt` work. Ansible itself lives in a
-  `/opt/ansible` virtualenv that is deliberately kept off `PATH`.
+  system packages such as `python3-apt` work.
 - `/root/.ansible/tmp` (Ansible's default `remote_tmp`) and `/var/tmp/ansible`
   are pre-created and are ordinary directories, never mount points.
 - **`pip3` accepts `--break-system-packages` on every release.** Ubuntu 22.04
@@ -362,7 +366,13 @@ docker run --privileged --rm docker.io/tonistiigi/binfmt --install all
 
 If emulation is unavailable, let CI publish instead: the **container-images**
 GitHub Actions workflow builds every Ubuntu release and Rocky 9 on a native
-amd64 and arm64 runner, so no emulation is involved.
+amd64 and arm64 runner, so no emulation is involved. It also smoke tests each
+image before publishing and refuses to promote one that regresses on the
+things that have broken downstream tests before (a wiped `/tmp`, an interpreter
+that does not resolve to the system Python, or a `pip3` that rejects
+`--break-system-packages`), and on Ansible reappearing in a managed node. It
+runs on pushes to `main` that touch the Dockerfiles, and can be triggered
+manually.
 
 All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
 with the `UBUNTU_VERSION` build argument, so any future release can be built
@@ -449,7 +459,7 @@ Inside the container you can then:
 ```bash
 docker exec -it ubuntu-systemd bash
 systemctl status
-ansible-galaxy collection list
+python3 --version
 ```
 
 ## Ansible Roles
