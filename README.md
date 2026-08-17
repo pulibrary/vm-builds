@@ -81,9 +81,20 @@ just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 ### Docker Images
 
 ```bash
-# Ubuntu 22.04 systemd + Ansible image
-just build-ubuntu-docker          # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
-just push-ubuntu-docker           # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+# Ubuntu 22.04 (jammy) systemd + Ansible image
+just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+
+# Ubuntu 24.04 (noble) systemd + Ansible image
+just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+
+# Ubuntu 26.04 (resolute) systemd + Ansible image
+just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+
+# All Ubuntu releases in one go
+just build-ubuntu-docker-all
 
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
@@ -195,16 +206,23 @@ packer build -var "gcp_project_id=pul-gcdc" \
 
 ## Docker Images (systemd-capable, on GHCR)
 
-In addition to VM images, this repo builds **systemd-capable** Docker images that double as Ansible control hosts. Images are published to **GitHub Container Registry (GHCR)** under:
+In addition to VM images, this repo builds **systemd-capable** Docker images used as **Ansible managed nodes** (test targets). Images are published to **GitHub Container Registry (GHCR)** under:
 
-- `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>` (jammy)
+- `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
+- `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:<tag>` (resolute)
 - `ghcr.io/pulibrary/vm-builds/rocky-9:<tag>`
 
 These images:
 
 - Run `systemd` as PID 1 (for testing services with units)
 - Include `pulsys` with passwordless sudo
-- Have Python + Ansible core installed, plus the collections in `ansible/collections.yaml`
+- Provide a system Python interpreter, which is all an Ansible target needs
+
+Ansible itself is **not** installed. These are managed nodes, not control
+hosts: the controller ships its own module code over the connection, so
+installing Ansible in the target would only add weight and a second
+version to keep in sync.
 
 ### 1. Creating a Token for GHCR
 
@@ -220,7 +238,7 @@ Steps:
    **Settings → Developer settings → Personal access tokens → Tokens (classic)**.
 2. Click **"Generate new token (classic)"**.
 3. Give it a descriptive name, e.g. `vm-builds-ghcr`.
-4. Set an **expiration** that matches your org policy.
+4. Set an **expiration**.
 5. Under **Scopes**, select at least:
    - `read:packages`
    - `write:packages`
@@ -252,33 +270,156 @@ Or, using just:
 just ghcr-login
 ```
 
-(Uses `GHCR_PAT` / `GITHUB_TOKEN` / `GH_TOKEN` under the hood.)
+(Uses `GHCR_PAT` / `GITHUB_TOKEN` / `GH_TOKEN` under the hood. If no token is
+set but you are already logged in to `ghcr.io`, the existing login is reused.)
 
 ### 3. Building and Pushing Images (Local)
 
 From the repo root:
 
 ```bash
-# Ubuntu 22.04 systemd + Ansible image
-just build-ubuntu-docker          # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
-just push-ubuntu-docker           # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+# Ubuntu 22.04 (jammy) systemd + Ansible image
+just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+
+# Ubuntu 24.04 (noble) systemd + Ansible image
+just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+
+# Ubuntu 26.04 (resolute) systemd + Ansible image
+just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
+just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 
 # Rocky 9 systemd + Ansible image
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
+
+# Push all Ubuntu releases at once
+just push-ubuntu-docker-all
+```
+
+Each Ubuntu `push-*` recipe builds and links the image if needed, then
+publishes both `:<tag>` and `:latest`, so an untagged pull resolves:
+
+```bash
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04
+```
+
+### Using these images as Ansible targets
+
+These images are built to be driven by an external Ansible controller (for
+example Prancible's Molecule suite), so a few things are guaranteed:
+
+- **`apt`/`dnf` metadata is kept in the image.** Package tasks work without
+  `update_cache: true`; dropping the lists makes tasks fail with
+  `No package matching '<name>' is available`.
+- **Nothing sweeps `/tmp`.** The distro ships a systemd-tmpfiles rule that
+  empties `/tmp` during boot. A controller connecting while the container is
+  still booting could have its staged module deleted mid-task, failing with
+  `can't open file .../AnsiballZ_setup.py: No such file or directory`. These
+  images override that rule so `/tmp` contents are never removed.
+- **No `VOLUME` declarations.** `/run`, `/tmp` and `/sys/fs/cgroup` are left to
+  the caller to mount. Declaring them as volumes creates anonymous volumes that
+  shadow the caller's mounts and makes copying files into those paths behave
+  differently under Docker and Podman.
+- **`python3` resolves to the system interpreter**, so modules that need
+  system packages such as `python3-apt` work.
+- `/root/.ansible/tmp` (Ansible's default `remote_tmp`) and `/var/tmp/ansible`
+  are pre-created and are ordinary directories, never mount points.
+- **`pip3` accepts `--break-system-packages` on every release.** Ubuntu 22.04
+  ships a pip too old to know that flag, while 24.04 and later require it to
+  install into the system environment, so the same `ansible.builtin.pip` task
+  would fail on 22.04 only. The 22.04 image upgrades its system pip to close
+  that gap; newer releases keep their distro-managed pip.
+
+### Architecture matters
+
+Downstream consumers (Prancible's molecule suite on GitHub Actions) run on
+**amd64**, while developer laptops are usually **arm64**. A container image
+only runs on the architecture it was built for; publishing an arm64-only image
+makes every command inside it fail with `Exec format error`, which surfaces
+downstream as misleading Ansible errors such as "Failed to create temporary
+directory".
+
+Because of this, **all Ubuntu and Rocky build recipes produce a multi-arch
+(amd64 + arm64) manifest by default**, and the `push-*` recipes refuse to
+publish anything that does not include amd64.
+
+```bash
+# multi-arch (default)
+just build-jammy-docker
+just build-rocky-docker
+
+# host architecture only: fast local iteration, never publish this
+just build-jammy-docker-native
+just build-rocky-docker-native
+```
+
+Multi-arch builds need working cross-architecture emulation. The recipes
+check this up front and fail in seconds rather than minutes:
+
+```bash
+just check-emulation
+# install emulation if it is missing:
+docker run --privileged --rm docker.io/tonistiigi/binfmt --install all
+```
+
+If emulation is unavailable, let CI publish instead: the **container-images**
+GitHub Actions workflow builds every Ubuntu release and Rocky 9 on a native
+amd64 and arm64 runner, so no emulation is involved. It also smoke tests each
+image before publishing and refuses to promote one that regresses on the
+things that have broken downstream tests before (a wiped `/tmp`, an interpreter
+that does not resolve to the system Python, or a `pip3` that rejects
+`--break-system-packages`), and on Ansible reappearing in a managed node. It
+runs on pushes to `main` that touch the Dockerfiles, and can be triggered
+manually.
+
+All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
+with the `UBUNTU_VERSION` build argument, so any future release can be built
+without editing the Dockerfile:
+
+```bash
+just build-ubuntu-docker dev 26.04
+just push-ubuntu-docker  dev 26.04
 ```
 
 You can override the tag (e.g., use a date or git SHA):
 
 ```bash
-just build-ubuntu-docker 2025-11-13
-just push-ubuntu-docker  2025-11-13
+just build-jammy-docker 2025-11-13
+just push-jammy-docker  2025-11-13
+
+just build-noble-docker 2025-11-13
+just push-noble-docker  2025-11-13
+
+just build-resolute-docker 2025-11-13
+just push-resolute-docker  2025-11-13
 ```
 
 Resulting tags:
 
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:2025-11-13`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:2025-11-13`
+- `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/rocky-9:2025-11-13`
+
+To alias a built image so the short local name, the fully qualified GHCR
+name, and the GHCR `:latest` tag all point at the same image (the image is
+built first if it is not present locally):
+
+```bash
+# ubuntu-22.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-22.04
+just link-jammy-docker
+
+# ubuntu-24.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-24.04
+just link-noble-docker
+
+# ubuntu-26.04:dev <-> ghcr.io/pulibrary/vm-builds/ubuntu-26.04
+just link-resolute-docker
+
+# all releases at once
+just link-ubuntu-docker-all
+```
 
 ### 4. Pulling and Running the Images
 
@@ -286,6 +427,8 @@ Pull:
 
 ```bash
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
+docker pull ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/rocky-9:dev
 ```
 
@@ -316,7 +459,7 @@ Inside the container you can then:
 ```bash
 docker exec -it ubuntu-systemd bash
 systemctl status
-ansible-galaxy collection list
+python3 --version
 ```
 
 ## Ansible Roles

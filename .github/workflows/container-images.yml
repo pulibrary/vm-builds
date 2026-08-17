@@ -1,0 +1,159 @@
+name: Container images
+
+# Builds the systemd + Ansible container images on native runners and
+# publishes multi-arch manifests to GHCR. Native runners are used
+# deliberately: cross building these images under emulation is slow and
+# unreliable.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker/ubuntu/Dockerfile
+      - docker/rocky/Dockerfile
+      - .github/workflows/container-images.yml
+  pull_request:
+    paths:
+      - docker/ubuntu/Dockerfile
+      - docker/rocky/Dockerfile
+      - .github/workflows/container-images.yml
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Additional tag to publish alongside latest
+        required: false
+        default: dev
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    name: build ${{ matrix.image }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-9]
+        arch: [amd64, arm64]
+        include:
+          - image: ubuntu-22.04
+            dockerfile: docker/ubuntu/Dockerfile
+            build-args: UBUNTU_VERSION=22.04
+          - image: ubuntu-24.04
+            dockerfile: docker/ubuntu/Dockerfile
+            build-args: UBUNTU_VERSION=24.04
+          - image: ubuntu-26.04
+            dockerfile: docker/ubuntu/Dockerfile
+            build-args: UBUNTU_VERSION=26.04
+          - image: rocky-9
+            dockerfile: docker/rocky/Dockerfile
+            build-args: ""
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push per-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/${{ matrix.arch }}
+          build-args: ${{ matrix.build-args }}
+          push: ${{ github.event_name != 'pull_request' }}
+          provenance: false
+          tags: ${{ env.NAMESPACE }}/${{ matrix.image }}:${{ matrix.arch }}-${{ github.sha }}
+
+      - name: Smoke test the image
+        if: matrix.arch == 'amd64'
+        run: |
+          set -euo pipefail
+          ref="${NAMESPACE}/${{ matrix.image }}:${{ matrix.arch }}-${GITHUB_SHA}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Image was not pushed on a pull request; skipping smoke test."
+            exit 0
+          fi
+
+          # Guards against the regressions this image has actually hit:
+          # a wiped /tmp, and a pip that rejects --break-system-packages.
+          # These are managed nodes, so a Python interpreter is all a
+          # controller needs; Ansible itself must not be installed here.
+          docker run --rm --entrypoint /bin/sh "$ref" -c '
+            set -e
+            mkdir -p /tmp/probe && echo x > /tmp/probe/AnsiballZ_setup.py
+            systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev >/dev/null 2>&1 || true
+            test -f /tmp/probe/AnsiballZ_setup.py || {
+              echo "FAIL: /tmp contents were removed by systemd-tmpfiles"; exit 1; }
+            command -v python3 | grep -qx /usr/bin/python3 || {
+              echo "FAIL: python3 does not resolve to the system interpreter"; exit 1; }
+            python3 -c "import sys; print(sys.version)" >/dev/null || {
+              echo "FAIL: python3 is not usable"; exit 1; }
+            if command -v ansible >/dev/null 2>&1; then
+              echo "FAIL: ansible is installed; these images are managed nodes"; exit 1
+            fi
+            if command -v apt-get >/dev/null; then
+              python3 -c "import apt" || { echo "FAIL: python3-apt missing"; exit 1; }
+              pip3 install --break-system-packages --dry-run wheel >/dev/null 2>&1 || {
+                echo "FAIL: pip3 rejects --break-system-packages"; exit 1; }
+            fi
+            echo "smoke test passed"
+          '
+
+  manifest:
+    name: publish ${{ matrix.image }} manifest
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-9]
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifests
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          repo="${NAMESPACE}/${{ matrix.image }}"
+
+          # `latest` is what downstream consumers pull when they omit a tag.
+          tags=(latest "${GITHUB_SHA}")
+          if [ -n "${INPUT_TAG:-}" ]; then
+            tags+=("${INPUT_TAG}")
+          fi
+
+          for tag in "${tags[@]}"; do
+            docker buildx imagetools create \
+              --tag "${repo}:${tag}" \
+              "${repo}:amd64-${GITHUB_SHA}" \
+              "${repo}:arm64-${GITHUB_SHA}"
+          done
+
+          docker buildx imagetools inspect "${repo}:latest"
