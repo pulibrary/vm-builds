@@ -6,7 +6,7 @@ set shell := ["bash", "-c"]
 jammy_tpl := "builds/linux/ubuntu/jammy-cloudimg.pkr.hcl"
 noble_tpl := "builds/linux/ubuntu/noble-cloudimg.pkr.hcl"
 resolute_tpl := "builds/linux/ubuntu/resolute-cloudimg.pkr.hcl"
-ubuntu_qemu_desktop_tpl := "builds/linux/ubuntu/linux-ubuntu-qemu-desktop-cloudimg.pkr.hcl"
+xubuntu_jammy_tpl := "builds/linux/ubuntu/xubuntu-jammy-cloudimg.pkr.hcl"
 ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
 rocky_qemu_tpl := "builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl"
@@ -25,8 +25,8 @@ init-noble:
 init-resolute:
     packer init {{ resolute_tpl }}
 
-init-ubuntu-qemu-desktop:
-    packer init {{ ubuntu_qemu_desktop_tpl }}
+init-xubuntu-jammy:
+    packer init {{ xubuntu_jammy_tpl }}
 
 init-ubuntu-aws:
     packer init {{ ubuntu_aws_tpl }}
@@ -40,16 +40,15 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-jammy init-noble init-resolute init-ubuntu-qemu-desktop init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
+init-all: init-jammy init-noble init-resolute init-xubuntu-jammy init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
     @echo "PACKER: All templates initialized."
 init-freebsd-gcp:
     packer init {{ freebsd_gcp_tpl }}
 
-# Ubuntu QEMU requires an iso_checksum
-validate-ubuntu-qemu-desktop iso_checksum: init-ubuntu-qemu-desktop
-    @echo "PACKER: Validating Ubuntu QEMU DESKTOP template"
-    [[ -n "{{ iso_checksum }}" ]] || (echo "ERROR: iso_checksum is required for Ubuntu Desktop (e.g. sha256:...)" >&2; exit 1)
-    packer validate -var "iso_checksum={{ iso_checksum }}" {{ ubuntu_qemu_desktop_tpl }}
+# Xubuntu pins its own cloud image and checksum, like the server templates
+validate-xubuntu-jammy: init-xubuntu-jammy
+    @echo "PACKER: Validating Xubuntu jammy template"
+    packer validate {{ xubuntu_jammy_tpl }}
 
 validate-ubuntu-aws: init-ubuntu-aws
     @echo "PACKER: Validating Ubuntu AWS template"
@@ -85,9 +84,9 @@ validate-rocky-aws: init-rocky-aws
     @echo "PACKER: Validating Rocky AWS template"
     packer validate {{ rocky_aws_tpl }}
 
-# For validate-all, require you to provide both checksums explicitly
-validate-all ubuntu_iso_checksum rocky_iso_checksum:
-    just validate-ubuntu-qemu-desktop {{ ubuntu_iso_checksum }}
+# Rocky QEMU still requires an explicit checksum
+validate-all rocky_iso_checksum:
+    just validate-xubuntu-jammy
     just validate-rocky-qemu {{ rocky_iso_checksum }}
     just validate-ubuntu-aws
     just validate-ubuntu-gcp
@@ -127,12 +126,12 @@ build-resolute export_ovf='true' debug='false' VARS='':
       && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ resolute_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ resolute_tpl }}
 
-build-ubuntu-qemu-desktop iso_checksum export_ovf='false' debug='false' VARS='':
-    just validate-ubuntu-qemu-desktop {{ iso_checksum }}
-    @echo "PACKER: Building Ubuntu QEMU (DESKTOP) (export_ovf={{ export_ovf }}, debug={{ debug }})"
+build-xubuntu-jammy export_ovf='true' debug='false' VARS='':
+    just validate-xubuntu-jammy
+    @echo "PACKER: Building Xubuntu jammy (export_ovf={{ export_ovf }}, debug={{ debug }})"
     [[ "{{ debug }}" == "true" ]] \
-      && env PACKER_LOG=1 packer build -debug -force -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }} \
-      || env PACKER_LOG=1 packer build -force        -var "iso_checksum={{ iso_checksum }}" -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ ubuntu_qemu_desktop_tpl }}
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ xubuntu_jammy_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ xubuntu_jammy_tpl }}
 
 build-rocky-qemu export_ovf='true' debug='false' VARS='':
     @echo "PACKER: Building Rocky QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
