@@ -4,7 +4,6 @@
   become_method: ansible.builtin.sudo
   debugger: never
   gather_facts: true
-  hosts: all
   vars:
     enable_cloudinit: false
     ansible_python_interpreter: auto
