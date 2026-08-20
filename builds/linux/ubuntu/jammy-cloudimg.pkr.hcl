@@ -72,8 +72,8 @@ variable "iso_url" {
 
 variable "iso_checksum" {
   type        = string
-  default     = "sha256:ea85b16f81b3f6aa53a1260912d3f991fc33e0e0fc1d73f0b8c9c96247e42fdb"
-  description = "Checksum for the cloud image (e.g., sha256:...). See Ubuntu release checksums."
+  default     = "file:https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+  description = "Checksum for the cloud image. Defaults to the upstream SHA256SUMS for the same 'current' directory as iso_url, so it cannot go stale as Canonical republishes the image. Override with an explicit sha256:... to pin a known build."
 }
 
 // QEMU knobs
