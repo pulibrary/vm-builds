@@ -5,7 +5,7 @@
     "python@latest",
     "awscli2@2.35.11",
     "just@latest",
-    "git@latest",
+    "git@2.55.0",
     "ansible@2.21.3",
     "qemu@latest",
     "google-cloud-sdk@latest"
