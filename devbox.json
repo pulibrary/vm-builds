@@ -8,7 +8,7 @@
     "git@2.55.0",
     "ansible@2.21.3",
     "qemu@5.2.0",
-    "google-cloud-sdk@latest"
+    "google-cloud-sdk@581.0.0"
   ],
   "shell": {
     "init_hook": [
