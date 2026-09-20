@@ -17,6 +17,25 @@ freebsd_gcp_tpl := "builds/bsd/freebsd/freebsd-15-gcp.pkr.hcl"
 ubuntu_cloudinit_user_data := "builds/linux/ubuntu/data/user-data.pkrtpl.hcl"
 rocky_cloudinit_user_data := "builds/linux/rocky/data/user-data.pkrtpl.hcl"
 
+# Python toolchain (ansible, ansible-lint, yamllint) is managed with uv
+sync:
+    uv sync --frozen
+
+update-deps:
+    uv lock --upgrade
+    uv sync
+
+lock:
+    uv lock
+
+lint:
+    uv run --frozen yamllint ansible
+    uv run --frozen ansible-lint ansible
+
+syntax-check:
+    uv run --frozen ansible-playbook --syntax-check -i localhost, ansible/linux-playbook.yml
+    uv run --frozen ansible-playbook --syntax-check -i localhost, ansible/linux-desktop-playbook.yml
+
 # Initialize
 init-jammy:
     packer init {{ jammy_tpl }}

@@ -17,13 +17,16 @@ This repository contains Packer templates, Dockerfiles, and Ansible playbooks fo
 # Install Devbox from https://www.jetbox.io/devbox
 # Then simply run:
 devbox shell
+
+# One-time: install the pinned Python tooling into .venv
+devbox run init
 ```
 
 This will automatically install all required tools:
 
 - Packer
-- Ansible
 - Python
+- uv
 - AWS CLI v2
 - Google Cloud SDK
 - QEMU
@@ -31,13 +34,32 @@ This will automatically install all required tools:
 - Git
 - Just
 
+### Python dependencies are managed with uv
+
+Ansible and the linters are *not* installed as system packages. They are pinned
+in `pyproject.toml`, locked in `uv.lock`, and installed into `.venv` by
+[uv](https://docs.astral.sh/uv/). Renovate opens pull requests when new
+versions are released.
+
+```bash
+just sync          # install exactly what uv.lock specifies
+just lock          # regenerate uv.lock after editing pyproject.toml
+just update-deps   # upgrade every dependency and re-sync
+just lint          # yamllint + ansible-lint against ansible/
+just syntax-check  # ansible-playbook --syntax-check
+```
+
+Because Devbox puts `.venv/bin` on `PATH`, Packer's Ansible provisioner picks
+up the locked `ansible-playbook` automatically. Outside Devbox, prefix commands
+with `uv run`, e.g. `uv run ansible-playbook ...`.
+
 ### Manual Installation
 
 If not using Devbox, (you know what you're doing :wink:) manually install:
 
 - Packer >= 1.12.0
-- Ansible >= 2.9
-- Python >= 3.8
+- Python >= 3.12
+- uv >= 0.12 (then run `uv sync --frozen` for Ansible and the linters)
 - Docker >= 20.10
 - QEMU (for local testing)
 
@@ -50,6 +72,9 @@ cd vm-builds
 
 # Enter the Devbox environment
 devbox shell
+
+# (One-time) Install the locked Python tooling
+devbox run init
 
 # (One-time) Initialize packer plugins for all templates
 just init-all
@@ -141,6 +166,9 @@ just build-rocky-qemu 'sha256:<rocky sha256>' true
 │   └── ubuntu/
 │       └── Dockerfile       # Ubuntu 22.04 systemd + Ansible
 ├── justfile                 # Command shortcuts
+├── pyproject.toml           # Pinned Python dependencies (Ansible, linters)
+├── uv.lock                  # Fully resolved dependency lock file
+├── renovate.json            # Automated dependency update rules
 └── devbox.json             # Development environment
 ```
 
