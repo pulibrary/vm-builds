@@ -3,7 +3,7 @@
   "packages": [
     "packer@latest",
     "python@latest",
-    "awscli2@latest",
+    "awscli2@2.35.11",
     "just@latest",
     "git@latest",
     "ansible@latest",
