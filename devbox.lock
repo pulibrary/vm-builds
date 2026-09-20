@@ -322,85 +322,11 @@
         }
       }
     },
-    "qemu@latest": {
-      "last_modified": "2026-04-16T08:46:55Z",
-      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#qemu",
+    "qemu@5.2.0": {
+      "last_modified": "2021-04-30T15:35:33Z",
+      "resolved": "github:NixOS/nixpkgs/c8dff328e51f62760bf646bc345e3aabcfd82046#qemu",
       "source": "devbox-search",
-      "version": "10.2.2",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/pqkqds2a0y3k60vfl0inb9szdnjs3g70-qemu-10.2.2",
-              "default": true
-            },
-            {
-              "name": "doc",
-              "path": "/nix/store/rq5p7dj1h1p7apgx0kl0xmavfrxz50bx-qemu-10.2.2-doc"
-            }
-          ],
-          "store_path": "/nix/store/pqkqds2a0y3k60vfl0inb9szdnjs3g70-qemu-10.2.2"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/ivhp01y9i150m84hwgdgvcr4fkpvrsij-qemu-10.2.2",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/ppnvkb9b6l1vjr43xkyqw39mijhdkidg-qemu-10.2.2-debug"
-            },
-            {
-              "name": "doc",
-              "path": "/nix/store/fy7yg5510ivscl7vvmi7v7g89v3xccx9-qemu-10.2.2-doc"
-            },
-            {
-              "name": "ga",
-              "path": "/nix/store/5mk9vsxi1lp6433x445d85cy03nnvpic-qemu-10.2.2-ga"
-            }
-          ],
-          "store_path": "/nix/store/ivhp01y9i150m84hwgdgvcr4fkpvrsij-qemu-10.2.2"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/yf9cm9zgj2iambff052kcbazzsp9abk2-qemu-10.2.2",
-              "default": true
-            },
-            {
-              "name": "doc",
-              "path": "/nix/store/y4nhxxrmi57d355ndrcn4pc23b3xd2cy-qemu-10.2.2-doc"
-            }
-          ],
-          "store_path": "/nix/store/yf9cm9zgj2iambff052kcbazzsp9abk2-qemu-10.2.2"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/3q8ksxfw97dxi7g11c7xf1ksa1r04crs-qemu-10.2.2",
-              "default": true
-            },
-            {
-              "name": "debug",
-              "path": "/nix/store/vjrswq96adqmracq16z8h09hbh766ln6-qemu-10.2.2-debug"
-            },
-            {
-              "name": "doc",
-              "path": "/nix/store/d64pj7ss5kfnrf7fz6v22b0hwz9jxgyg-qemu-10.2.2-doc"
-            },
-            {
-              "name": "ga",
-              "path": "/nix/store/i8s1hf6ci3b925ps696f07rfm5j7q0l2-qemu-10.2.2-ga"
-            }
-          ],
-          "store_path": "/nix/store/3q8ksxfw97dxi7g11c7xf1ksa1r04crs-qemu-10.2.2"
-        }
-      }
+      "version": "5.2.0"
     }
   }
 }
