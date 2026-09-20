@@ -217,51 +217,51 @@
       "source": "devbox-search",
       "version": "0.11.2"
     },
-    "packer@latest": {
-      "last_modified": "2026-04-16T08:46:55Z",
-      "resolved": "github:NixOS/nixpkgs/b86751bc4085f48661017fa226dee99fab6c651b#packer",
+    "packer@1.15.4": {
+      "last_modified": "2026-08-27T07:16:00Z",
+      "resolved": "github:NixOS/nixpkgs/c27cdad491a991b11ed731760aa2ef8db0cb0410#packer",
       "source": "devbox-search",
-      "version": "1.15.1",
+      "version": "1.15.4",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/g7z22v1kv7d13nnx8s97cfp00cbsi6z1-packer-1.15.1",
+              "path": "/nix/store/crk1jcy99pha58ymx0zvaln7kwzbc9y4-packer-1.15.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/g7z22v1kv7d13nnx8s97cfp00cbsi6z1-packer-1.15.1"
+          "store_path": "/nix/store/crk1jcy99pha58ymx0zvaln7kwzbc9y4-packer-1.15.4"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/z0ppzq47zr48wd74lglcsiy9ihh3cdz6-packer-1.15.1",
+              "path": "/nix/store/02mazsgwpdiy0agc8pdhb0wqw719pxxy-packer-1.15.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/z0ppzq47zr48wd74lglcsiy9ihh3cdz6-packer-1.15.1"
+          "store_path": "/nix/store/02mazsgwpdiy0agc8pdhb0wqw719pxxy-packer-1.15.4"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/lv4sdg5jjc0z51mx8cz72pf8pmvq64g4-packer-1.15.1",
+              "path": "/nix/store/npyph52ys6yrgcz53nr3qj8x79gn9nlf-packer-1.15.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/lv4sdg5jjc0z51mx8cz72pf8pmvq64g4-packer-1.15.1"
+          "store_path": "/nix/store/npyph52ys6yrgcz53nr3qj8x79gn9nlf-packer-1.15.4"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/bavjv6f06ihijgnb41i09sky1pc4xj03-packer-1.15.1",
+              "path": "/nix/store/ywxg9y5n3cal7a28vc5qvixh2jd9xij1-packer-1.15.4",
               "default": true
             }
           ],
-          "store_path": "/nix/store/bavjv6f06ihijgnb41i09sky1pc4xj03-packer-1.15.1"
+          "store_path": "/nix/store/ywxg9y5n3cal7a28vc5qvixh2jd9xij1-packer-1.15.4"
         }
       }
     },
