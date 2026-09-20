@@ -6,7 +6,7 @@
     "awscli2@latest",
     "just@latest",
     "git@latest",
-    "ansible@latest",
+    "ansible@2.21.3",
     "qemu@latest",
     "google-cloud-sdk@latest"
   ],
