@@ -7,7 +7,7 @@
       "disable_plugin": true
     },
     "uv": "0.12.5",
-    "awscli2": "latest",
+    "awscli2": "2.35.11",
     "just": "latest",
     "git": "latest",
     "qemu": "latest",
