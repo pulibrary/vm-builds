@@ -12,11 +12,28 @@
   ],
   "shell": {
     "init_hook": [
-      "echo 'Welcome to devbox!' > /dev/null"
+      "echo 'Run \"devbox run init\" to set up the Python environment'"
     ],
     "scripts": {
+      "init": [
+        "uv sync --frozen",
+        "test -d .venv && echo 'Virtual environment ready' || echo 'Failed to create virtual environment'"
+      ],
+      "update-deps": [
+        "uv lock --upgrade",
+        "uv sync"
+      ],
+      "lock": [
+        "uv lock"
+      ],
+      "clean": [
+        "rm -rf .venv",
+        "rm -rf .devbox"
+      ],
       "test": [
-        "echo \"Error: no test specified\" && exit 1"
+        "uv run --frozen ansible --version",
+        "uv run --frozen ansible-lint --version",
+        "packer version"
       ]
     }
   }
