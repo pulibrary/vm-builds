@@ -1,6 +1,6 @@
 // © Broadcom. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
-// Ubuntu Desktop on QEMU from cloud image + cloud-init (NoCloud)
+// Xubuntu 22.04 (jammy) on QEMU from cloud image + cloud-init (NoCloud)
 
 packer {
   required_version = ">= 1.12.0"
@@ -51,20 +51,28 @@ variable "vm_firmware" {
 }
 
 # Cloud image (QCOW2)
+# Xubuntu is the jammy server cloud image with the Xubuntu desktop installed on
+# top, so it starts from exactly the same base as the jammy server build.
 variable "iso_filename" {
   type        = string
-  default     = "ubuntu-22.04-server-cloudimg-amd64.img"
+  default     = "jammy-server-cloudimg-amd64.img"
   description = "Local image under ./isos if iso_url not set."
 }
 variable "iso_url" {
   type        = string
-  default     = ""
+  default     = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
   description = "file:///... or https://... path to cloud image."
 }
 variable "iso_checksum" {
   type        = string
-  default     = "sha256:CHANGE_ME"
-  description = "e.g. sha256:..."
+  default     = "file:https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+  description = "Checksum for the cloud image. Defaults to the upstream SHA256SUMS for the same 'current' directory as iso_url, so it cannot go stale as Canonical republishes the image. Override with an explicit sha256:... to pin a known build."
+}
+
+variable "desktop_package" {
+  type        = string
+  default     = "xubuntu-desktop"
+  description = "Desktop meta-package installed on top of the cloud image."
 }
 
 # QEMU knobs
@@ -351,7 +359,7 @@ locals {
   manifest_path   = "${abspath(path.root)}/../../../manifests/"
   manifest_output = "${local.manifest_path}${local.manifest_date}.json"
 
-  vm_name    = "${var.vm_guest_os_family}-${var.vm_guest_os_name}-${replace(var.vm_guest_os_version, ".", "-")}-desktop-${local.build_timestamp}"
+  vm_name    = "${var.vm_guest_os_family}-x${var.vm_guest_os_name}-${replace(var.vm_guest_os_version, ".", "-")}-${local.build_timestamp}"
   output_dir = "${abspath(path.root)}/../../../artifacts/qemu/${local.vm_name}"
 
   iso_url_effective = var.iso_url != "" ? var.iso_url : "file://${abspath(path.root)}/isos/${var.iso_filename}"
@@ -410,7 +418,7 @@ locals {
 // QEMU Build
 //////////////////////////
 
-source "qemu" "linux-ubuntu-desktop-cloudimg" {
+source "qemu" "xubuntu-jammy-cloudimg" {
   iso_url      = local.iso_url_effective
   iso_checksum = var.iso_checksum
   disk_image   = true
@@ -453,9 +461,9 @@ source "qemu" "linux-ubuntu-desktop-cloudimg" {
 //////////////
 
 build {
-  sources = ["source.qemu.linux-ubuntu-desktop-cloudimg"]
+  sources = ["source.qemu.xubuntu-jammy-cloudimg"]
 
-  # IMPORTANT: enable only on this template
+  # IMPORTANT: the desktop role is enabled only on this template
   provisioner "ansible" {
     user                   = var.build_username
     galaxy_file            = "${abspath(path.root)}/../../../ansible/linux-requirements.yml"
@@ -475,8 +483,9 @@ build {
       "--extra-vars", "enable_cloudinit=${var.vm_guest_os_cloudinit}",
       "--extra-vars", "cleanup_final_image=true",
       "--extra-vars", "prepare_security_firstboot=${var.prepare_security_firstboot}",
-      # Desktop flag (ONLY this template sets it)
+      # Desktop flags (ONLY this template sets them)
       "--extra-vars", "enable_ubuntu_desktop_role=true",
+      "--extra-vars", "ubuntu_desktop_package=${var.desktop_package}",
       "--forks", "1"
     ]
   }
@@ -665,12 +674,14 @@ OVF
     ]
   }
 
+  // Publish just the converted files (+ qcow2)
   post-processor "artifice" {
     files = [
-      "${local.output_dir}/${local.qcow2_artifact}",
+      "${local.output_dir}/${local.qcow2_artifact}", # .qcow2 or .qcow2.gz
       "${local.output_dir}/${local.vm_name}.vmdk",
       "${local.output_dir}/${local.vm_name}.vhd",
-      "${local.output_dir}/${local.vm_name}.ova",
+      # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
+      # "${local.output_dir}/${local.vm_name}.ova",
     ]
   }
 
