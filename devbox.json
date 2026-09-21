@@ -1,25 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-  "packages": {
-    "packer": "latest",
-    "python": {
-      "version": "3.13",
-      "disable_plugin": true
-    },
-    "uv": "0.12.5",
-    "awscli2": "2.35.11",
-    "just": "latest",
-    "git": "latest",
-    "qemu": "latest",
-    "google-cloud-sdk": "latest"
-  },
-  "env": {
-    "PATH": "$DEVBOX_PROJECT_ROOT/.venv/bin:$PATH",
-    "VIRTUAL_ENV": "$DEVBOX_PROJECT_ROOT/.venv",
-    "UV_PROJECT_ENVIRONMENT": "$DEVBOX_PROJECT_ROOT/.venv",
-    "UV_PYTHON": "3.13",
-    "UV_PYTHON_PREFERENCE": "managed"
-  },
+  "packages": [
+    "packer@1.15.4",
+    "python@latest",
+    "awscli2@2.35.11",
+    "just@1.58.0",
+    "git@2.55.0",
+    "ansible@2.21.3",
+    "qemu@11.1.0",
+    "google-cloud-sdk@581.0.0"
+  ],
   "shell": {
     "init_hook": [
       "echo 'Run \"devbox run init\" to set up the Python environment'"
