@@ -1,6 +1,12 @@
 # docker/rocky/Dockerfile
 # syntax = docker/dockerfile:1.4
 FROM rockylinux:9
+
+# Links the published image to this repository in GHCR. Without the link the
+# package keeps the permissions of whoever pushed it first by hand, and the
+# workflow's GITHUB_TOKEN is refused with "permission_denied: write_package".
+LABEL org.opencontainers.image.source="https://github.com/pulibrary/vm-builds"
+
 ENV TZ=UTC \
     container=docker
 

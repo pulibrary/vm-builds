@@ -29,9 +29,10 @@
       "rangeStrategy": "bump"
     },
     {
+      "description": "Only propose ansible-core releases this project's Python floor can install",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["ansible-core"],
-      "ignoreUnstable": false
+      "ignoreUnstable": true
     }
   ]
 }
