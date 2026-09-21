@@ -3,6 +3,11 @@
 ARG UBUNTU_VERSION=26.04
 FROM ubuntu:${UBUNTU_VERSION}
 
+# Links the published image to this repository in GHCR. Without the link the
+# package keeps the permissions of whoever pushed it first by hand, and the
+# workflow's GITHUB_TOKEN is refused with "permission_denied: write_package".
+LABEL org.opencontainers.image.source="https://github.com/pulibrary/vm-builds"
+
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     container=docker
