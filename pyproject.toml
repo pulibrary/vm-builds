@@ -10,7 +10,7 @@ authors = [{ name = "Princeton University Library" }]
 dependencies = [
   "ansible-core==2.21.4",
   "ansible-lint==26.9.0",
-  "boto3==1.43.100",
+  "boto3==1.43.101",
   "cryptography==50.0.1",
   "google-auth==2.58.0",
   "jmespath==1.1.0",
