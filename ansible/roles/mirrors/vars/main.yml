@@ -4,10 +4,16 @@ mirrors_task_name: Configure the preferred package mirrors.
 # Files written only when the PUL mirror is usable; removed otherwise so apt is
 # never left pointing at a mirror it cannot reach.
 pul_mirror_config_files:
-  - /etc/apt/sources.list.d/00-pulmirror.list
+  - /etc/apt/sources.list.d/00-pulmirror.sources
   - /etc/apt/preferences.d/99-pulmirror.pref
 
 # Drop-ins we add only when the distribution does not configure the upstream
 # archive itself, and delete again when it does.
 pul_upstream_archive_filename: 20-ubuntu-archive
 pul_upstream_security_filename: 10-security
+
+# Components and signing key shared by every Ubuntu source this role writes.
+# The PUL mirror is a straight copy of the Ubuntu archive, so it verifies with
+# the same keyring.
+pul_ubuntu_components: [main, restricted, universe, multiverse]
+pul_ubuntu_archive_keyring: /usr/share/keyrings/ubuntu-archive-keyring.gpg

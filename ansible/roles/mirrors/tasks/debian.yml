@@ -8,6 +8,23 @@
   ansible.builtin.set_fact:
     ubuntu_codename: "{{ ansible_distribution_release | default(ansible_lsb.codename) }}"
 
+# deb822_repository needs the Python debian library on the target. Install it
+# from whatever sources the image already ships before touching any of them.
+- name: Check for the Python debian library
+  ansible.builtin.command:
+    cmd: "{{ ansible_python_interpreter | default(discovered_interpreter_python) | default('/usr/bin/python3') }} -c 'import debian'"
+  register: pul_python_debian
+  changed_when: false
+  failed_when: false
+
+- name: Ensure python3-debian is available for deb822_repository
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  when: pul_python_debian.rc != 0
+
 # We deliberately never rewrite /etc/apt/sources.list. Whatever Ubuntu shipped
 # there (one-line entries on 22.04, deb822 ubuntu.sources on 24.04+) already is
 # the upstream fallback this role wants to guarantee, and editing it by regexp is
@@ -86,50 +103,63 @@
 # alongside the stock entries points apt at the same suite twice, which makes
 # every later apt run emit a page of "configured multiple times" warnings.
 - name: Ensure the upstream Ubuntu archive is configured as a fallback
-  ansible.builtin.apt_repository:
-    repo: "deb http://{{ pul_upstream_archive_host }}/ubuntu {{ item }} main restricted universe multiverse"
+  ansible.builtin.deb822_repository:
+    name: "{{ pul_upstream_archive_filename }}"
+    types: [deb]
+    uris: "http://{{ pul_upstream_archive_host }}/ubuntu"
+    suites:
+      - "{{ ubuntu_codename }}"
+      - "{{ ubuntu_codename }}-updates"
+      - "{{ ubuntu_codename }}-backports"
+    components: "{{ pul_ubuntu_components }}"
+    signed_by: "{{ pul_ubuntu_archive_keyring }}"
     state: present
-    filename: "{{ pul_upstream_archive_filename }}"
-    update_cache: no
-  loop:
-    - "{{ ubuntu_codename }}"
-    - "{{ ubuntu_codename }}-updates"
-    - "{{ ubuntu_codename }}-backports"
   when: not (pul_upstream_archive_present | bool)
 
+# The .list variant is what apt_repository wrote before the switch to deb822.
 - name: Remove our archive drop-in when the distribution already provides one
   ansible.builtin.file:
-    path: "/etc/apt/sources.list.d/{{ pul_upstream_archive_filename }}.list"
+    path: "/etc/apt/sources.list.d/{{ pul_upstream_archive_filename }}.{{ item }}"
     state: absent
-  when: pul_upstream_archive_present | bool
+  loop: "{{ ['list', 'sources'] if pul_upstream_archive_present | bool else ['list'] }}"
 
 # Security stays on Canonical
 - name: Ensure default security repo is present
-  ansible.builtin.apt_repository:
-    repo: "deb http://{{ pul_upstream_security_host }}/ubuntu {{ ubuntu_codename }}-security main restricted universe multiverse"
+  ansible.builtin.deb822_repository:
+    name: "{{ pul_upstream_security_filename }}"
+    types: [deb]
+    uris: "http://{{ pul_upstream_security_host }}/ubuntu"
+    suites: ["{{ ubuntu_codename }}-security"]
+    components: "{{ pul_ubuntu_components }}"
+    signed_by: "{{ pul_ubuntu_archive_keyring }}"
     state: present
-    filename: "{{ pul_upstream_security_filename }}"
-    update_cache: no
   when: not (pul_upstream_security_present | bool)
 
 - name: Remove our security drop-in when the distribution already provides one
   ansible.builtin.file:
-    path: "/etc/apt/sources.list.d/{{ pul_upstream_security_filename }}.list"
+    path: "/etc/apt/sources.list.d/{{ pul_upstream_security_filename }}.{{ item }}"
     state: absent
-  when: pul_upstream_security_present | bool
+  loop: "{{ ['list', 'sources'] if pul_upstream_security_present | bool else ['list'] }}"
 
 # pulmirror for archive/updates/backports. Its URI differs from the upstream
 # archive, so this adds a genuinely new source rather than a duplicate one.
+- name: Remove the legacy one-line PUL mirror source
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/00-pulmirror.list
+    state: absent
+
 - name: Add PUL mirror (archive/updates/backports)
-  ansible.builtin.apt_repository:
-    repo: "deb https://{{ pul_mirror_host }}/mirror/ubuntu {{ item }} main restricted universe multiverse"
+  ansible.builtin.deb822_repository:
+    name: 00-pulmirror
+    types: [deb]
+    uris: "https://{{ pul_mirror_host }}/mirror/ubuntu"
+    suites:
+      - "{{ ubuntu_codename }}"
+      - "{{ ubuntu_codename }}-updates"
+      - "{{ ubuntu_codename }}-backports"
+    components: "{{ pul_ubuntu_components }}"
+    signed_by: "{{ pul_ubuntu_archive_keyring }}"
     state: present
-    filename: "00-pulmirror"
-    update_cache: no
-  loop:
-    - "{{ ubuntu_codename }}"
-    - "{{ ubuntu_codename }}-updates"
-    - "{{ ubuntu_codename }}-backports"
   when: pul_mirror_available
 
 # Soft-prefer the PUL mirror without breaking fallbacks
