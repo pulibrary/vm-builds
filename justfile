@@ -195,13 +195,29 @@ DOCKER_NAMESPACE := "ghcr.io/pulibrary/vm-builds"
 
 # Login helper.
 # Uses (in order): GHCR_PAT, GITHUB_TOKEN, GH_TOKEN
-# If no token is set but you are already logged in to ghcr.io, that is reused.
+# If none is set and the gh CLI is logged in, its token is used; it must carry
+# the write:packages scope, otherwise pushes fail late with "does not match
+# expected scopes". An existing ghcr.io login is reused only without gh.
 ghcr-login:
     @user="${GITHUB_ACTOR:-pulibrary}"; \
      token="${GHCR_PAT:-${GITHUB_TOKEN:-$GH_TOKEN}}"; \
+     if [ -z "$token" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then \
+       if gh auth status 2>&1 | grep -q "write:packages"; then \
+         user="$(gh api user -q .login)"; \
+         token="$(gh auth token)"; \
+         echo "GHCR: logging in with the gh CLI token for $user"; \
+       else \
+         echo "ERROR: your gh token lacks the write:packages scope needed to push." >&2; \
+         echo "       Run: gh auth refresh -h github.com -s write:packages" >&2; \
+         echo "       (or set GHCR_PAT to a classic PAT with write:packages)" >&2; \
+         exit 1; \
+       fi; \
+     fi; \
      if [ -z "$token" ]; then \
        if docker login ghcr.io --get-login >/dev/null 2>&1; then \
          echo "GHCR: reusing existing docker login for $(docker login ghcr.io --get-login)"; \
+         echo "      If pushing fails with 'does not match expected scopes', run:" >&2; \
+         echo "        gh auth refresh -h github.com -s write:packages && just ghcr-login" >&2; \
          exit 0; \
        fi; \
        echo "ERROR: Set GHCR_PAT (or GITHUB_TOKEN / GH_TOKEN) before running this." >&2; \
