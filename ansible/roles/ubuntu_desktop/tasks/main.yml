@@ -1,12 +1,16 @@
 ---
+# No cache_valid_time here on purpose. It is keyed off the modification time of
+# the apt lists directory, which a cleaned image can have recent even though the
+# lists themselves are gone. The update is then skipped and the install below
+# fails with "No package matching '<name>' is available". An image build runs
+# once, so always refreshing is both correct and cheap.
 - name: Update apt cache (Debian/Ubuntu)
   ansible.builtin.apt:
     update_cache: true
-    cache_valid_time: 3600
 
-- name: Install Ubuntu desktop meta-package
+- name: Install desktop meta-package
   ansible.builtin.apt:
-    name: lubuntu-desktop
+    name: "{{ ubuntu_desktop_package }}"
     state: present
 
 - name: Ensure default target is graphical
@@ -15,3 +19,19 @@
     dest: /etc/systemd/system/default.target
     state: link
     force: true
+
+- name: Ensure directories for power and screensaver overrides exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /etc/systemd/logind.conf.d
+    - /etc/X11/xorg.conf.d
+    - /etc/xdg/xfce4/xfconf/xfce-perchannel-xml
+    - /etc/xdg/autostart
+  when: ubuntu_desktop_disable_power_management | bool
+
+- name: Keep the desktop image awake like a server
+  ansible.builtin.include_tasks: no-power-management.yml
+  when: ubuntu_desktop_disable_power_management | bool

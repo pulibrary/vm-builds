@@ -1,0 +1,25 @@
+---
+ubuntu_desktop_package: xubuntu-desktop
+
+# A desktop image built here is still a server: it runs unattended, is reached
+# over SSH/VNC, and must never become unreachable because a console idled.
+# These defaults disable every idle path: suspend, screen blanking, DPMS
+# power saving, and the lock screen.
+ubuntu_desktop_disable_power_management: true
+
+# systemd targets that must never be reachable, so nothing can suspend the
+# machine even if a desktop component asks for it.
+ubuntu_desktop_masked_sleep_targets:
+  - sleep.target
+  - suspend.target
+  - hibernate.target
+  - hybrid-sleep.target
+  - suspend-then-hibernate.target
+
+# Desktop components that idle the session or lock the screen. Disabled by
+# hiding their autostart entries, which works whether or not the component
+# is installed.
+ubuntu_desktop_disabled_autostart:
+  - light-locker
+  - xfce4-screensaver
+  - xscreensaver
