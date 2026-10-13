@@ -1,53 +1,53 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "ansible@2.21.3": {
-      "last_modified": "2026-09-13T01:58:51Z",
-      "resolved": "github:NixOS/nixpkgs/02f5696b0e6097e589076d886b317b83ff0437d7#ansible",
+    "ansible@2.21.4": {
+      "last_modified": "2026-10-08T19:21:32Z",
+      "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30#ansible",
       "source": "devbox-search",
-      "version": "2.21.3",
+      "version": "2.21.4",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/jyn9899p762ai68lqy6kcdp6rb3npqrx-python3.14-ansible-core-2.21.3",
+              "path": "/nix/store/yg5dpa3w03n5jxaafhmkgy1hraa3rxpq-python3.14-ansible-core-2.21.4",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/vc2f5nra23hn5akmnkgmrs47ny7d1g17-python3.14-ansible-core-2.21.3-dist"
+              "path": "/nix/store/lb38pz4cxvzzykv70liriz7kfzj7n010-python3.14-ansible-core-2.21.4-dist"
             }
           ],
-          "store_path": "/nix/store/jyn9899p762ai68lqy6kcdp6rb3npqrx-python3.14-ansible-core-2.21.3"
+          "store_path": "/nix/store/yg5dpa3w03n5jxaafhmkgy1hraa3rxpq-python3.14-ansible-core-2.21.4"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/7mx8jfz197pcm4a462gxx56040gagpxv-python3.14-ansible-core-2.21.3",
+              "path": "/nix/store/qzqq6jh1zikbxalnd1a131dkw1yfxhxv-python3.14-ansible-core-2.21.4",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/rfknslw4p6509sarkm2jzi634j1jjhlr-python3.14-ansible-core-2.21.3-dist"
+              "path": "/nix/store/1lirgwrli9hi12cabfiqb9yg7hfnnwia-python3.14-ansible-core-2.21.4-dist"
             }
           ],
-          "store_path": "/nix/store/7mx8jfz197pcm4a462gxx56040gagpxv-python3.14-ansible-core-2.21.3"
+          "store_path": "/nix/store/qzqq6jh1zikbxalnd1a131dkw1yfxhxv-python3.14-ansible-core-2.21.4"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/pvnr310pjvk6lynx2g9k06b2pja5x6rw-python3.14-ansible-core-2.21.3",
+              "path": "/nix/store/cq487x1r6rip3x0i74hh3v43di91fp37-python3.14-ansible-core-2.21.4",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/wyj7nmraabw8cs0pyksa57m8cjsif9yf-python3.14-ansible-core-2.21.3-dist"
+              "path": "/nix/store/3fz6mwndk1kvi6wrhdndca01zqd3f021-python3.14-ansible-core-2.21.4-dist"
             }
           ],
-          "store_path": "/nix/store/pvnr310pjvk6lynx2g9k06b2pja5x6rw-python3.14-ansible-core-2.21.3"
+          "store_path": "/nix/store/cq487x1r6rip3x0i74hh3v43di91fp37-python3.14-ansible-core-2.21.4"
         }
       }
     },
@@ -361,69 +361,69 @@
         }
       }
     },
-    "qemu@11.1.0": {
-      "last_modified": "2026-09-19T18:56:16Z",
-      "resolved": "github:NixOS/nixpkgs/79b35bf0bda5cd110f856aa5b5b2c5ba4460dbf5#qemu",
+    "qemu@11.1.1": {
+      "last_modified": "2026-10-08T19:21:32Z",
+      "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30#qemu",
       "source": "devbox-search",
-      "version": "11.1.0",
+      "version": "11.1.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/9314hmf6psz3wj7cdlkzbphsqh31dmgq-qemu-11.1.0",
+              "path": "/nix/store/lzm84ri4kbyx8gqxwk5sd21mqc5all73-qemu-11.1.1",
               "default": true
             },
             {
               "name": "doc",
-              "path": "/nix/store/3jvkybrfyqpwpr8s7mz840gdmwmsdlz1-qemu-11.1.0-doc"
+              "path": "/nix/store/bjk6fn8hykk5nqvgrgys3f3h5mmymacy-qemu-11.1.1-doc"
             }
           ],
-          "store_path": "/nix/store/9314hmf6psz3wj7cdlkzbphsqh31dmgq-qemu-11.1.0"
+          "store_path": "/nix/store/lzm84ri4kbyx8gqxwk5sd21mqc5all73-qemu-11.1.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/m9dify7w6cdgm9lf0hrwvhxhkg0w7x72-qemu-11.1.0",
+              "path": "/nix/store/n17jpr321a9xsjbvngr55im34xajjc5w-qemu-11.1.1",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/xasvjkxwcpny678kyblhc9399xnarx8m-qemu-11.1.0-debug"
+              "path": "/nix/store/xyyv7y3sdzsqpj5kzpqkmigdqnslsxg6-qemu-11.1.1-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/n4j8c0ggpv7w75kfglrcwpynmz29i4bm-qemu-11.1.0-doc"
+              "path": "/nix/store/5icxbgv6g5hq7nyvqrnxiq26m1h0vb31-qemu-11.1.1-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/6rf207cbplrlzd3k8s9rqwvw0blv3qaj-qemu-11.1.0-ga"
+              "path": "/nix/store/x2signvjjn11sxdsw47vp7zrah7y96c1-qemu-11.1.1-ga"
             }
           ],
-          "store_path": "/nix/store/m9dify7w6cdgm9lf0hrwvhxhkg0w7x72-qemu-11.1.0"
+          "store_path": "/nix/store/n17jpr321a9xsjbvngr55im34xajjc5w-qemu-11.1.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/glylmrad7ipgfi9jih2gqjnzzjgxqbwb-qemu-11.1.0",
+              "path": "/nix/store/2kg1si8qra7fp9d0w4ydbzb0cnqrdm91-qemu-11.1.1",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/qs9d57wi3vnbplvylabgqqwphpmpq9ps-qemu-11.1.0-debug"
+              "path": "/nix/store/08l8hcjszlx217a8krfi2jqspr0b2p0j-qemu-11.1.1-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/50afzz0d1m0yriij704q16bmjmpwp9p8-qemu-11.1.0-doc"
+              "path": "/nix/store/hync2yp31cah363y50f7q3fhkzw3h2qb-qemu-11.1.1-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/g8xff132y63kb4ikla2k6fma9rsygrl5-qemu-11.1.0-ga"
+              "path": "/nix/store/20scry457f6zb3sjri2iby4kfnw7a66z-qemu-11.1.1-ga"
             }
           ],
-          "store_path": "/nix/store/glylmrad7ipgfi9jih2gqjnzzjgxqbwb-qemu-11.1.0"
+          "store_path": "/nix/store/2kg1si8qra7fp9d0w4ydbzb0cnqrdm91-qemu-11.1.1"
         }
       }
     }
