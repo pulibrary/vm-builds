@@ -163,41 +163,41 @@
       "last_modified": "2026-10-08T19:21:32Z",
       "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30?lastModified=1791487292&narHash=sha256-tqM7xDEsaeK1p6VvRygeZ9LkQRpUUkbRT02BHv6hnTM%3D"
     },
-    "google-cloud-sdk@581.0.0": {
-      "last_modified": "2026-09-13T01:58:51Z",
-      "resolved": "github:NixOS/nixpkgs/02f5696b0e6097e589076d886b317b83ff0437d7#google-cloud-sdk",
+    "google-cloud-sdk@583.0.0": {
+      "last_modified": "2026-10-08T19:21:32Z",
+      "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30#google-cloud-sdk",
       "source": "devbox-search",
-      "version": "581.0.0",
+      "version": "583.0.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/ki0l8avm0gid6slq0h4dwnrfxcxmpj1v-google-cloud-sdk-581.0.0",
+              "path": "/nix/store/psci5myh0k7wsk73sfdfw5gwg9n4bf68-google-cloud-sdk-583.0.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/ki0l8avm0gid6slq0h4dwnrfxcxmpj1v-google-cloud-sdk-581.0.0"
+          "store_path": "/nix/store/psci5myh0k7wsk73sfdfw5gwg9n4bf68-google-cloud-sdk-583.0.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/gv0mybw2v9dfc2nncn4mg3d4h2blgcgs-google-cloud-sdk-581.0.0",
+              "path": "/nix/store/cwsswljkdhkx8qaj6cyv8jp6vp7x7ynk-google-cloud-sdk-583.0.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/gv0mybw2v9dfc2nncn4mg3d4h2blgcgs-google-cloud-sdk-581.0.0"
+          "store_path": "/nix/store/cwsswljkdhkx8qaj6cyv8jp6vp7x7ynk-google-cloud-sdk-583.0.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/rnvrqn4ix95zygb22zwr8f4pn14s8cfb-google-cloud-sdk-581.0.0",
+              "path": "/nix/store/01gin7cr31bf278dy8zhdw4jw00qsjkd-google-cloud-sdk-583.0.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/rnvrqn4ix95zygb22zwr8f4pn14s8cfb-google-cloud-sdk-581.0.0"
+          "store_path": "/nix/store/01gin7cr31bf278dy8zhdw4jw00qsjkd-google-cloud-sdk-583.0.0"
         }
       }
     },
