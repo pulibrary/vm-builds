@@ -7,7 +7,7 @@
     "just@1.58.0",
     "git@2.55.0",
     "ansible@2.21.4",
-    "qemu@11.1.1",
+    "qemu@11.1.2",
     "google-cloud-sdk@583.0.0"
   ],
   "shell": {

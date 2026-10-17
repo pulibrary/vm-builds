@@ -361,69 +361,69 @@
         }
       }
     },
-    "qemu@11.1.1": {
-      "last_modified": "2026-10-08T19:21:32Z",
-      "resolved": "github:NixOS/nixpkgs/8edc0c72e3a38faf5434e40d1f19431125fe4b30#qemu",
+    "qemu@11.1.2": {
+      "last_modified": "2026-10-16T02:15:57Z",
+      "resolved": "github:NixOS/nixpkgs/f20cd90e28fe0403873f473b29e42662cd86e8c4#qemu",
       "source": "devbox-search",
-      "version": "11.1.1",
+      "version": "11.1.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/lzm84ri4kbyx8gqxwk5sd21mqc5all73-qemu-11.1.1",
+              "path": "/nix/store/8l6br4xggxdw6a7zsx00lxiby0sb2naj-qemu-11.1.2",
               "default": true
             },
             {
               "name": "doc",
-              "path": "/nix/store/bjk6fn8hykk5nqvgrgys3f3h5mmymacy-qemu-11.1.1-doc"
+              "path": "/nix/store/icfcf68xb9pn2cbwqg9aibcrm673pxi0-qemu-11.1.2-doc"
             }
           ],
-          "store_path": "/nix/store/lzm84ri4kbyx8gqxwk5sd21mqc5all73-qemu-11.1.1"
+          "store_path": "/nix/store/8l6br4xggxdw6a7zsx00lxiby0sb2naj-qemu-11.1.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/n17jpr321a9xsjbvngr55im34xajjc5w-qemu-11.1.1",
+              "path": "/nix/store/cpc91h7qk1g3k1h1zfqd41gp44xswsbk-qemu-11.1.2",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/xyyv7y3sdzsqpj5kzpqkmigdqnslsxg6-qemu-11.1.1-debug"
+              "path": "/nix/store/cxxgqjly5a5xaxxhlckaniql53k4n65s-qemu-11.1.2-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/5icxbgv6g5hq7nyvqrnxiq26m1h0vb31-qemu-11.1.1-doc"
+              "path": "/nix/store/klm8csy0c7awirsafmdx2hcp0j8dxlrp-qemu-11.1.2-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/x2signvjjn11sxdsw47vp7zrah7y96c1-qemu-11.1.1-ga"
+              "path": "/nix/store/iwsvi9b6821r0k0hy3ypkjwyg1mrdzkb-qemu-11.1.2-ga"
             }
           ],
-          "store_path": "/nix/store/n17jpr321a9xsjbvngr55im34xajjc5w-qemu-11.1.1"
+          "store_path": "/nix/store/cpc91h7qk1g3k1h1zfqd41gp44xswsbk-qemu-11.1.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/2kg1si8qra7fp9d0w4ydbzb0cnqrdm91-qemu-11.1.1",
+              "path": "/nix/store/hvd7xprnfdr3vfk37a6ip0rczv2q3yjf-qemu-11.1.2",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/08l8hcjszlx217a8krfi2jqspr0b2p0j-qemu-11.1.1-debug"
+              "path": "/nix/store/6dlpmg1by42sh4ny9f1cb2wyvwhi6cvd-qemu-11.1.2-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/hync2yp31cah363y50f7q3fhkzw3h2qb-qemu-11.1.1-doc"
+              "path": "/nix/store/lf6cg9wdvp37f244prss1fqay8wkgp58-qemu-11.1.2-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/20scry457f6zb3sjri2iby4kfnw7a66z-qemu-11.1.1-ga"
+              "path": "/nix/store/s43909kp66l2hs116rh029nqr36dah7d-qemu-11.1.2-ga"
             }
           ],
-          "store_path": "/nix/store/2kg1si8qra7fp9d0w4ydbzb0cnqrdm91-qemu-11.1.1"
+          "store_path": "/nix/store/hvd7xprnfdr3vfk37a6ip0rczv2q3yjf-qemu-11.1.2"
         }
       }
     }
