@@ -1,6 +1,6 @@
 name: Container images
 
-# Builds the systemd + Ansible container images on native runners and
+# Builds the systemd managed-node container images on native runners and
 # publishes multi-arch manifests to GHCR. Native runners are used
 # deliberately: cross building these images under emulation is slow and
 # unreliable.
@@ -9,13 +9,13 @@ on:
   push:
     branches: [main]
     paths:
-      - docker/ubuntu/Dockerfile
-      - docker/rocky/Dockerfile
+      - docker/ubuntu/**
+      - docker/rocky/**
       - .github/workflows/container-images.yml
   pull_request:
     paths:
-      - docker/ubuntu/Dockerfile
-      - docker/rocky/Dockerfile
+      - docker/ubuntu/**
+      - docker/rocky/**
       - .github/workflows/container-images.yml
   workflow_dispatch:
     inputs:
@@ -38,21 +38,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-9]
+        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-10]
         arch: [amd64, arm64]
         include:
           - image: ubuntu-22.04
-            dockerfile: docker/ubuntu/Dockerfile
-            build-args: UBUNTU_VERSION=22.04
+            dockerfile: docker/ubuntu/22.04/Dockerfile
+            context: docker/ubuntu/22.04
           - image: ubuntu-24.04
-            dockerfile: docker/ubuntu/Dockerfile
-            build-args: UBUNTU_VERSION=24.04
+            dockerfile: docker/ubuntu/24.04/Dockerfile
+            context: docker/ubuntu/24.04
           - image: ubuntu-26.04
-            dockerfile: docker/ubuntu/Dockerfile
-            build-args: UBUNTU_VERSION=26.04
-          - image: rocky-9
+            dockerfile: docker/ubuntu/26.04/Dockerfile
+            context: docker/ubuntu/26.04
+          - image: rocky-10
             dockerfile: docker/rocky/Dockerfile
-            build-args: ""
+            context: docker/rocky
           - arch: amd64
             runner: ubuntu-latest
           - arch: arm64
@@ -73,10 +73,11 @@ jobs:
       - name: Build and push per-arch image
         uses: docker/build-push-action@v7
         with:
-          context: .
+          # The images copy nothing in, so each builds from its own directory
+          # and its .dockerignore keeps the repo (and .env) out of the context.
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/${{ matrix.arch }}
-          build-args: ${{ matrix.build-args }}
           push: ${{ github.event_name != 'pull_request' }}
           provenance: false
           tags: ${{ env.NAMESPACE }}/${{ matrix.image }}:${{ matrix.arch }}-${{ github.sha }}
@@ -110,9 +111,12 @@ jobs:
             fi
             if command -v apt-get >/dev/null; then
               python3 -c "import apt" || { echo "FAIL: python3-apt missing"; exit 1; }
-              pip3 install --break-system-packages --dry-run wheel >/dev/null 2>&1 || {
-                echo "FAIL: pip3 rejects --break-system-packages"; exit 1; }
             fi
+            if command -v dnf >/dev/null; then
+              python3 -c "import dnf" || { echo "FAIL: python3-dnf missing"; exit 1; }
+            fi
+            pip3 install --break-system-packages --dry-run wheel >/dev/null 2>&1 || {
+              echo "FAIL: pip3 rejects --break-system-packages"; exit 1; }
             echo "smoke test passed"
           '
 
@@ -127,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-9]
+        image: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rocky-10]
     steps:
       - name: Log in to GHCR
         uses: docker/login-action@v4

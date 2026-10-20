@@ -106,24 +106,24 @@ just build-ubuntu-gcp pul-gcdc zone=us-east1-b machine_type=e2-standard-2
 ### Docker Images
 
 ```bash
-# Ubuntu 22.04 (jammy) systemd + Ansible image
+# Ubuntu 22.04 (jammy) systemd managed-node image (no Ansible installed)
 just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 
-# Ubuntu 24.04 (noble) systemd + Ansible image
+# Ubuntu 24.04 (noble) systemd managed-node image (no Ansible installed)
 just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 
-# Ubuntu 26.04 (resolute) systemd + Ansible image
+# Ubuntu 26.04 (resolute) systemd managed-node image (no Ansible installed)
 just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 
 # All Ubuntu releases in one go
 just build-ubuntu-docker-all
 
-# Rocky 9 systemd + Ansible image
-just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
-just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
+# Rocky 10 systemd managed-node image (no Ansible installed)
+just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-10:dev
+just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-10:dev
 ```
 
 ## Secrets & Config
@@ -173,9 +173,11 @@ just build-rocky-qemu 'sha256:<rocky sha256>' true
 │           └── linux-ubuntu-qemu-cloudimg.pkr.hcl
 ├── docker/                  # Docker image definitions
 │   ├── rocky/
-│   │   └── Dockerfile       # Rocky 9 systemd + Ansible
+│   │   └── Dockerfile       # Rocky 10 systemd managed node
 │   └── ubuntu/
-│       └── Dockerfile       # Ubuntu 22.04 systemd + Ansible
+│       ├── 22.04/Dockerfile # Ubuntu 22.04 systemd managed node
+│       ├── 24.04/Dockerfile # Ubuntu 24.04 systemd managed node
+│       └── 26.04/Dockerfile # Ubuntu 26.04 systemd managed node
 ├── justfile                 # Command shortcuts
 ├── pyproject.toml           # Pinned Python dependencies (Ansible, linters)
 ├── uv.lock                  # Fully resolved dependency lock file
@@ -239,7 +241,7 @@ In addition to VM images, this repo builds **systemd-capable** Docker images use
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:<tag>` (jammy)
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
 - `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:<tag>` (resolute)
-- `ghcr.io/pulibrary/vm-builds/rocky-9:<tag>`
+- `ghcr.io/pulibrary/vm-builds/rocky-10:<tag>`
 
 These images:
 
@@ -306,21 +308,21 @@ set but you are already logged in to `ghcr.io`, the existing login is reused.)
 From the repo root:
 
 ```bash
-# Ubuntu 22.04 (jammy) systemd + Ansible image
+# Ubuntu 22.04 (jammy) systemd managed-node image (no Ansible installed)
 just build-jammy-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 just push-jammy-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 
-# Ubuntu 24.04 (noble) systemd + Ansible image
+# Ubuntu 24.04 (noble) systemd managed-node image (no Ansible installed)
 just build-noble-docker           # builds ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 just push-noble-docker            # pushes ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 
-# Ubuntu 26.04 (resolute) systemd + Ansible image
+# Ubuntu 26.04 (resolute) systemd managed-node image (no Ansible installed)
 just build-resolute-docker        # builds ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 
-# Rocky 9 systemd + Ansible image
-just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-9:dev
-just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-9:dev
+# Rocky 10 systemd managed-node image (no Ansible installed)
+just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-10:dev
+just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-10:dev
 
 # Push all Ubuntu releases at once
 just push-ubuntu-docker-all
@@ -351,14 +353,14 @@ example Prancible's Molecule suite), so a few things are guaranteed:
   shadow the caller's mounts and makes copying files into those paths behave
   differently under Docker and Podman.
 - **`python3` resolves to the system interpreter**, so modules that need
-  system packages such as `python3-apt` work.
+  system packages such as `python3-apt` (Ubuntu) or `python3-dnf` (Rocky) work.
 - `/root/.ansible/tmp` (Ansible's default `remote_tmp`) and `/var/tmp/ansible`
   are pre-created and are ordinary directories, never mount points.
 - **`pip3` accepts `--break-system-packages` on every release.** Ubuntu 22.04
   ships a pip too old to know that flag, while 24.04 and later require it to
   install into the system environment, so the same `ansible.builtin.pip` task
   would fail on 22.04 only. The 22.04 image upgrades its system pip to close
-  that gap; newer releases keep their distro-managed pip.
+  that gap; newer releases and Rocky keep their distro-managed pip.
 
 ### Architecture matters
 
@@ -393,7 +395,7 @@ docker run --privileged --rm docker.io/tonistiigi/binfmt --install all
 ```
 
 If emulation is unavailable, let CI publish instead: the **container-images**
-GitHub Actions workflow builds every Ubuntu release and Rocky 9 on a native
+GitHub Actions workflow builds every Ubuntu release and Rocky 10 on a native
 amd64 and arm64 runner, so no emulation is involved. It also smoke tests each
 image before publishing and refuses to promote one that regresses on the
 things that have broken downstream tests before (a wiped `/tmp`, an interpreter
@@ -402,9 +404,12 @@ that does not resolve to the system Python, or a `pip3` that rejects
 runs on pushes to `main` that touch the Dockerfiles, and can be triggered
 manually.
 
-All Ubuntu releases share `docker/ubuntu/Dockerfile`; the release is chosen
-with the `UBUNTU_VERSION` build argument, so any future release can be built
-without editing the Dockerfile:
+Each Ubuntu release has its own `docker/ubuntu/<version>/Dockerfile`, because
+package versions are pinned and the versions differ between releases. Renovate
+keeps the base image digest and every pinned package current (see
+`renovate.json`). A new release needs a new directory, a matching `deb` rule in
+`renovate.json`, and a matrix entry in the workflow; the recipes then take its
+version:
 
 ```bash
 just build-ubuntu-docker dev 26.04
@@ -429,7 +434,7 @@ Resulting tags:
 - `ghcr.io/pulibrary/vm-builds/ubuntu-22.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:2025-11-13`
 - `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:2025-11-13`
-- `ghcr.io/pulibrary/vm-builds/rocky-9:2025-11-13`
+- `ghcr.io/pulibrary/vm-builds/rocky-10:2025-11-13`
 
 To alias a built image so the short local name, the fully qualified GHCR
 name, and the GHCR `:latest` tag all point at the same image (the image is
@@ -457,7 +462,7 @@ Pull:
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
-docker pull ghcr.io/pulibrary/vm-builds/rocky-9:dev
+docker pull ghcr.io/pulibrary/vm-builds/rocky-10:dev
 ```
 
 To run with systemd inside the container (requires `--privileged` and cgroup mounts):
@@ -479,7 +484,7 @@ docker run --privileged \
   -v /run:/run \
   -v /tmp:/tmp \
   -d --name rocky-systemd \
-  ghcr.io/pulibrary/vm-builds/rocky-9:dev
+  ghcr.io/pulibrary/vm-builds/rocky-10:dev
 ```
 
 Inside the container you can then:

@@ -33,6 +33,52 @@
       "matchManagers": ["pep621"],
       "matchPackageNames": ["ansible-core"],
       "ignoreUnstable": true
+    },
+    {
+      "description": "Each Ubuntu Dockerfile is tied to its release's package pins, so only refresh the base image digest",
+      "matchFileNames": ["docker/ubuntu/*/Dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ubuntu"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "enabled": false
+    },
+    {
+      "description": "Look up the Ubuntu 22.04 image's apt pins in jammy and its update pockets",
+      "matchFileNames": ["docker/ubuntu/22.04/Dockerfile"],
+      "matchDatasources": ["deb"],
+      "registryUrls": [
+        "https://archive.ubuntu.com/ubuntu?suite=jammy&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=jammy-updates&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=jammy-security&components=main,universe&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "Look up the Ubuntu 24.04 image's apt pins in noble and its update pockets",
+      "matchFileNames": ["docker/ubuntu/24.04/Dockerfile"],
+      "matchDatasources": ["deb"],
+      "registryUrls": [
+        "https://archive.ubuntu.com/ubuntu?suite=noble&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=noble-updates&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=noble-security&components=main,universe&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "Look up the Ubuntu 26.04 image's apt pins in resolute and its update pockets",
+      "matchFileNames": ["docker/ubuntu/26.04/Dockerfile"],
+      "matchDatasources": ["deb"],
+      "registryUrls": [
+        "https://archive.ubuntu.com/ubuntu?suite=resolute&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=resolute-updates&components=main,universe&binaryArch=amd64",
+        "https://archive.ubuntu.com/ubuntu?suite=resolute-security&components=main,universe&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "Only propose pip releases that still install on Ubuntu 22.04's Python 3.10",
+      "matchFileNames": ["docker/ubuntu/22.04/Dockerfile"],
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["pip"],
+      "constraints": {"python": "==3.10.*"},
+      "constraintsFiltering": "strict"
     }
   ]
 }
