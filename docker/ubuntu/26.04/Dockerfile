@@ -62,7 +62,7 @@ RUN apt-get update \
        sudo=1.9.17p2-1ubuntu3.2 \
        openssh-server=1:10.2p1-2ubuntu3.8 \
        net-tools=2.10-2ubuntu1 \
-       ca-certificates=20260601~26.04.1 \
+       ca-certificates=20260816ubuntu0.26.04.1 \
        gnupg=2.4.8-4ubuntu3.1 \
        python3=3.14.3-0ubuntu2 \
        python3-apt=3.1.0ubuntu1.1 \
