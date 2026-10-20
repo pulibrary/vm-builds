@@ -1,7 +1,7 @@
 // © Broadcom. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 // borrowed heavily from https://vmware.github.io/packer-examples-for-vsphere/
-// Packer + QEMU using Rocky Linux 9.4 GenericCloud + cloud-init (NoCloud seed)
+// Packer + QEMU using Rocky Linux 10 GenericCloud + cloud-init (NoCloud seed)
 
 packer {
   required_version = ">= 1.12.0"
@@ -38,12 +38,12 @@ variable "vm_guest_os_name" {
 
 variable "vm_guest_os_version" {
   type    = string
-  default = "9.4"
+  default = "10.2"
 }
 
 variable "vm_guest_os_type" {
   type    = string
-  default = "rhel9_64Guest"
+  default = "rhel10_64Guest"
 } // manifest label
 
 // Firmware label (manifest only)
@@ -55,18 +55,18 @@ variable "vm_firmware" {
 // Cloud image (QCOW2)
 variable "iso_filename" {
   type        = string
-  default     = "Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+  default     = "Rocky-10-GenericCloud-Base.latest.x86_64.qcow2"
   description = "Default local image under ./isos when iso_url not provided."
 }
 
 variable "iso_url" {
   type    = string
-  default = "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+  default = "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base.latest.x86_64.qcow2"
 }
 
 variable "iso_checksum" {
   type    = string
-  default = "sha256:15d81d3434b298142b2fdd8fb54aef2662684db5c082cc191c3c79762ed6360c"
+  default = "file:https://dl.rockylinux.org/pub/rocky/10/images/x86_64/CHECKSUM"
 }
 
 // QEMU knobs
