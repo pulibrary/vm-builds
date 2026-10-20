@@ -268,7 +268,7 @@ _free-image-name ref:
      fi
 
 # Build an Ubuntu systemd-capable Ansible control image.
-# Uses docker/ubuntu/Dockerfile; version selects the Ubuntu release.
+# Uses docker/ubuntu/<version>/Dockerfile; version selects the Ubuntu release.
 # Produces a multi-arch manifest by default.
 build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION platforms=DOCKER_PLATFORMS:
     just check-emulation {{ platforms }}
@@ -277,20 +277,18 @@ build-ubuntu-docker tag="dev" version=UBUNTU_DOCKER_VERSION platforms=DOCKER_PLA
        echo "DOCKER: building Ubuntu {{ version }} for $platform"; \
        docker build \
          --platform "$platform" \
-         -f docker/ubuntu/Dockerfile \
-         --build-arg UBUNTU_VERSION={{ version }} \
+         -f docker/ubuntu/{{ version }}/Dockerfile \
          --manifest {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
-         . || exit 1; \
+         docker/ubuntu/{{ version }} || exit 1; \
      done
 
 # Build for the host architecture only. Fast for local iteration; never
 # publish the result, since other architectures cannot run it.
 build-ubuntu-docker-native tag="dev" version=UBUNTU_DOCKER_VERSION:
     docker build \
-      -f docker/ubuntu/Dockerfile \
-      --build-arg UBUNTU_VERSION={{ version }} \
+      -f docker/ubuntu/{{ version }}/Dockerfile \
       -t {{DOCKER_NAMESPACE}}/ubuntu-{{ version }}:{{tag}} \
-      .
+      docker/ubuntu/{{ version }}
 
 # Kept for discoverability; multi-arch is now the default
 build-ubuntu-docker-multi tag="dev" version=UBUNTU_DOCKER_VERSION:
@@ -419,22 +417,22 @@ link-ubuntu-docker-all tag="dev":
 # failed build can never leave a half-published tag behind.
 build-rocky-docker tag="dev" platforms=DOCKER_PLATFORMS:
     just check-emulation {{ platforms }}
-    just _free-image-name {{DOCKER_NAMESPACE}}/rocky-9:{{tag}}
+    just _free-image-name {{DOCKER_NAMESPACE}}/rocky-10:{{tag}}
     @for platform in $(echo "{{ platforms }}" | tr ',' ' '); do \
-       echo "DOCKER: building Rocky 9 for $platform"; \
+       echo "DOCKER: building Rocky 10 for $platform"; \
        docker build \
          --platform "$platform" \
          -f docker/rocky/Dockerfile \
-         --manifest {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
-         . || exit 1; \
+         --manifest {{DOCKER_NAMESPACE}}/rocky-10:{{tag}} \
+         docker/rocky || exit 1; \
      done
 
 # Build Rocky for the host architecture only (local iteration)
 build-rocky-docker-native tag="dev":
     docker build \
       -f docker/rocky/Dockerfile \
-      -t {{DOCKER_NAMESPACE}}/rocky-9:{{tag}} \
-      .
+      -t {{DOCKER_NAMESPACE}}/rocky-10:{{tag}} \
+      docker/rocky
 
 # Kept for discoverability; multi-arch is now the default
 build-rocky-docker-multi tag="dev":
@@ -443,8 +441,8 @@ build-rocky-docker-multi tag="dev":
 # Alias a built Rocky image so the short local name, the fully qualified
 # GHCR name, and the GHCR :latest tag all point at it
 link-rocky-docker tag="dev":
-    @short="rocky-9:{{ tag }}"; \
-     full="{{DOCKER_NAMESPACE}}/rocky-9:{{ tag }}"; \
+    @short="rocky-10:{{ tag }}"; \
+     full="{{DOCKER_NAMESPACE}}/rocky-10:{{ tag }}"; \
      if ! docker image inspect "$full" >/dev/null 2>&1 \
         && ! docker image inspect "$short" >/dev/null 2>&1; then \
        echo "DOCKER: $full not found locally, building it first."; \
@@ -457,13 +455,13 @@ link-rocky-docker tag="dev":
      fi; \
      docker tag "$src" "$short"; \
      docker tag "$src" "$full"; \
-     docker tag "$src" "{{DOCKER_NAMESPACE}}/rocky-9:latest"; \
-     echo "DOCKER: linked $src -> $short, $full, {{DOCKER_NAMESPACE}}/rocky-9:latest"
+     docker tag "$src" "{{DOCKER_NAMESPACE}}/rocky-10:latest"; \
+     echo "DOCKER: linked $src -> $short, $full, {{DOCKER_NAMESPACE}}/rocky-10:latest"
 
 # Push Rocky image to GHCR, including :latest so an untagged pull resolves
 push-rocky-docker tag="dev" force="false":
     just link-rocky-docker {{ tag }}
-    @ref="{{DOCKER_NAMESPACE}}/rocky-9:{{ tag }}"; \
+    @ref="{{DOCKER_NAMESPACE}}/rocky-10:{{ tag }}"; \
      if docker manifest exists "$ref" 2>/dev/null; then \
        archs=$(docker manifest inspect "$ref" | grep '"architecture"' | cut -d'"' -f4 | sort -u | tr '\n' ' '); \
      else \
@@ -479,7 +477,7 @@ push-rocky-docker tag="dev" force="false":
           fi;; \
      esac
     just ghcr-login
-    @ref="{{DOCKER_NAMESPACE}}/rocky-9"; \
+    @ref="{{DOCKER_NAMESPACE}}/rocky-10"; \
      for dest in "{{ tag }}" latest; do \
        if docker manifest exists "$ref:{{ tag }}" 2>/dev/null; then \
          docker manifest push --all "$ref:{{ tag }}" "docker://$ref:$dest"; \
