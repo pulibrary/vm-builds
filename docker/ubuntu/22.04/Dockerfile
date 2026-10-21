@@ -73,7 +73,7 @@ RUN apt-get update \
        python3-venv=3.10.6-1~22.04.1 \
        python3-pip=22.0.2+dfsg-1ubuntu0.7 \
     && apt-get clean \
-    && /usr/bin/pip3 install --no-cache-dir --upgrade pip==26.2.1 \
+    && /usr/bin/pip3 install --no-cache-dir --upgrade pip==26.2.2 \
     && /usr/bin/pip3 --version \
     && useradd -m -s /bin/bash pulsys \
     && echo "pulsys ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/99-pulsys \
