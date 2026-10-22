@@ -18,7 +18,7 @@ ARG SYSTEMD_VERSION=257-23.el10_2.2.rocky.0.1
 # renovate: datasource=rpm depName=sudo versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG SUDO_VERSION=1.9.17-10.p2.el10_2.7
 # renovate: datasource=rpm depName=openssh-server versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG OPENSSH_SERVER_VERSION=9.9p1-28.el10_2.rocky.0.1
+ARG OPENSSH_SERVER_VERSION=9.9p1-29.el10_2.rocky.0.1
 # renovate: datasource=rpm depName=net-tools versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG NET_TOOLS_VERSION=2.0-0.73.20160912git.el10
 # renovate: datasource=rpm depName=ca-certificates versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
