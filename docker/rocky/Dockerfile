@@ -22,7 +22,7 @@ ARG OPENSSH_SERVER_VERSION=9.9p1-28.el10_2.rocky.0.1
 # renovate: datasource=rpm depName=net-tools versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG NET_TOOLS_VERSION=2.0-0.73.20160912git.el10
 # renovate: datasource=rpm depName=ca-certificates versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG CA_CERTIFICATES_VERSION=2025.2.80_v9.0.305-102.el10
+ARG CA_CERTIFICATES_VERSION=2026.2.92_v9.0.319-100.3.el10_2
 # renovate: datasource=rpm depName=python3 versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG PYTHON3_VERSION=3.12.15-1.el10_2
 # renovate: datasource=rpm depName=python3-pip versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/AppStream/x86_64/os/repodata/
