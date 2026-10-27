@@ -77,7 +77,7 @@
       "matchFileNames": ["docker/ubuntu/22.04/Dockerfile"],
       "matchDatasources": ["pypi"],
       "matchPackageNames": ["pip"],
-      "constraints": {"python": "=3.15.1"},
+      "constraints": {"python": "=3.15.2"},
       "constraintsFiltering": "strict"
     }
   ]
