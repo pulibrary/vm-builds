@@ -266,51 +266,41 @@
         }
       }
     },
-    "packer@1.15.4": {
-      "last_modified": "2026-10-24T11:44:37Z",
-      "resolved": "github:NixOS/nixpkgs/d3b13ad75cc492690728f9307e443dec9ef9a20e#packer",
+    "packer@1.16.1": {
+      "last_modified": "2026-10-27T21:33:45Z",
+      "resolved": "github:NixOS/nixpkgs/f05535a0efcb2134c478d1e88434fadf486d42b5#packer",
       "source": "devbox-search",
-      "version": "1.15.4",
+      "version": "1.16.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/asj1hzh1crnla9ia2w5wkw6p23k72nlk-packer-1.15.4",
+              "path": "/nix/store/h0a7m8gag83mgxyya13mkkybzvj5isxv-packer-1.16.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/asj1hzh1crnla9ia2w5wkw6p23k72nlk-packer-1.15.4"
+          "store_path": "/nix/store/h0a7m8gag83mgxyya13mkkybzvj5isxv-packer-1.16.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/1j41zhk6q5dzf0n3ms9asngn7092k9pk-packer-1.15.4",
+              "path": "/nix/store/raqviqnivwnzidzvbi539qxlhygk4n8n-packer-1.16.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/1j41zhk6q5dzf0n3ms9asngn7092k9pk-packer-1.15.4"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/npyph52ys6yrgcz53nr3qj8x79gn9nlf-packer-1.15.4",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/npyph52ys6yrgcz53nr3qj8x79gn9nlf-packer-1.15.4"
+          "store_path": "/nix/store/raqviqnivwnzidzvbi539qxlhygk4n8n-packer-1.16.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/3hg6cgs8g4gqsdbqzsqggvrm63j59z5c-packer-1.15.4",
+              "path": "/nix/store/83sx834ldsn40lbm67d7i8s8avpp1i8i-packer-1.16.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/3hg6cgs8g4gqsdbqzsqggvrm63j59z5c-packer-1.15.4"
+          "store_path": "/nix/store/83sx834ldsn40lbm67d7i8s8avpp1i8i-packer-1.16.1"
         }
       }
     },

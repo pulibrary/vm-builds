@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": [
-    "packer@1.15.4",
+    "packer@1.16.1",
     "python@latest",
     "awscli2@2.36.31",
     "just@1.58.0",
