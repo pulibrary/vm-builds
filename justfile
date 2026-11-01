@@ -495,3 +495,76 @@ push-rocky-docker tag="dev" force="false":
          docker push "$ref:$dest"; \
        fi; \
      done
+
+# Multi-arch build for AlmaLinux (default). Publishing is a separate step so a
+# failed build can never leave a half-published tag behind.
+build-almalinux-docker tag="dev" platforms=DOCKER_PLATFORMS:
+    just check-emulation {{ platforms }}
+    just _free-image-name {{DOCKER_NAMESPACE}}/almalinux-10:{{tag}}
+    @for platform in $(echo "{{ platforms }}" | tr ',' ' '); do \
+       echo "DOCKER: building AlmaLinux 10 for $platform"; \
+       docker build \
+         --platform "$platform" \
+         -f docker/almalinux/Dockerfile \
+         --manifest {{DOCKER_NAMESPACE}}/almalinux-10:{{tag}} \
+         docker/almalinux || exit 1; \
+     done
+
+# Build AlmaLinux for the host architecture only (local iteration)
+build-almalinux-docker-native tag="dev":
+    docker build \
+      -f docker/almalinux/Dockerfile \
+      -t {{DOCKER_NAMESPACE}}/almalinux-10:{{tag}} \
+      docker/almalinux
+
+# Kept for discoverability; multi-arch is now the default
+build-almalinux-docker-multi tag="dev":
+    just build-almalinux-docker {{ tag }}
+
+# Alias a built AlmaLinux image so the short local name, the fully qualified
+# GHCR name, and the GHCR :latest tag all point at it
+link-almalinux-docker tag="dev":
+    @short="almalinux-10:{{ tag }}"; \
+     full="{{DOCKER_NAMESPACE}}/almalinux-10:{{ tag }}"; \
+     if ! docker image inspect "$full" >/dev/null 2>&1 \
+        && ! docker image inspect "$short" >/dev/null 2>&1; then \
+       echo "DOCKER: $full not found locally, building it first."; \
+       just build-almalinux-docker {{ tag }}; \
+     fi; \
+     if docker image inspect "$full" >/dev/null 2>&1; then \
+       src="$full"; \
+     else \
+       src="$short"; \
+     fi; \
+     docker tag "$src" "$short"; \
+     docker tag "$src" "$full"; \
+     docker tag "$src" "{{DOCKER_NAMESPACE}}/almalinux-10:latest"; \
+     echo "DOCKER: linked $src -> $short, $full, {{DOCKER_NAMESPACE}}/almalinux-10:latest"
+
+# Push AlmaLinux image to GHCR, including :latest so an untagged pull resolves
+push-almalinux-docker tag="dev" force="false":
+    just link-almalinux-docker {{ tag }}
+    @ref="{{DOCKER_NAMESPACE}}/almalinux-10:{{ tag }}"; \
+     if docker manifest exists "$ref" 2>/dev/null; then \
+       archs=$(docker manifest inspect "$ref" | grep '"architecture"' | cut -d'"' -f4 | sort -u | tr '\n' ' '); \
+     else \
+       archs=$(docker image inspect "$ref" | grep -m1 '"Architecture"' | cut -d'"' -f4); \
+     fi; \
+     case " $archs " in \
+       *" {{ DOCKER_CI_ARCH }} "*) ;; \
+       *) if [ "{{ force }}" != "true" ]; then \
+            echo "ERROR: $ref covers [$archs] but downstream CI needs {{ DOCKER_CI_ARCH }}." >&2; \
+            echo "       Rebuild multi-arch: just build-almalinux-docker {{ tag }}" >&2; \
+            echo "       To override: just push-almalinux-docker {{ tag }} true" >&2; \
+            exit 1; \
+          fi;; \
+     esac
+    just ghcr-login
+    @ref="{{DOCKER_NAMESPACE}}/almalinux-10"; \
+     for dest in "{{ tag }}" latest; do \
+       if docker manifest exists "$ref:{{ tag }}" 2>/dev/null; then \
+         docker manifest push --all "$ref:{{ tag }}" "docker://$ref:$dest"; \
+       else \
+         docker push "$ref:$dest"; \
+       fi; \
+     done

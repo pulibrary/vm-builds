@@ -124,6 +124,10 @@ just build-ubuntu-docker-all
 # Rocky 10 systemd managed-node image (no Ansible installed)
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-10:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-10:dev
+
+# AlmaLinux 10 systemd managed-node image (no Ansible installed)
+just build-almalinux-docker       # builds ghcr.io/pulibrary/vm-builds/almalinux-10:dev
+just push-almalinux-docker        # pushes ghcr.io/pulibrary/vm-builds/almalinux-10:dev
 ```
 
 ## Secrets & Config
@@ -160,6 +164,10 @@ just build-rocky-qemu 'sha256:<rocky sha256>' true
 │   └── linux-playbook.yml   # Main playbook
 ├── builds/
 │   └── linux/
+│       ├── almalinux/       # AlmaLinux Packer configs
+│       │   ├── data/        # Cloud-init templates
+│       │   ├── isos/        # AlmaLinux base images
+│       │   └── linux-almalinux-qemu-cloudimg.pkr.hcl
 │       ├── rocky/           # Rocky Linux Packer configs
 │       │   ├── data/        # Cloud-init templates
 │       │   ├── isos/        # Rocky base images
@@ -172,6 +180,8 @@ just build-rocky-qemu 'sha256:<rocky sha256>' true
 │           ├── linux-ubuntu-gcp.pkr.hcl
 │           └── linux-ubuntu-qemu-cloudimg.pkr.hcl
 ├── docker/                  # Docker image definitions
+│   ├── almalinux/
+│   │   └── Dockerfile       # AlmaLinux 10 systemd managed node
 │   ├── rocky/
 │   │   └── Dockerfile       # Rocky 10 systemd managed node
 │   └── ubuntu/
@@ -242,6 +252,7 @@ In addition to VM images, this repo builds **systemd-capable** Docker images use
 - `ghcr.io/pulibrary/vm-builds/ubuntu-24.04:<tag>` (noble)
 - `ghcr.io/pulibrary/vm-builds/ubuntu-26.04:<tag>` (resolute)
 - `ghcr.io/pulibrary/vm-builds/rocky-10:<tag>`
+- `ghcr.io/pulibrary/vm-builds/almalinux-10:<tag>`
 
 These images:
 
@@ -323,6 +334,10 @@ just push-resolute-docker         # pushes ghcr.io/pulibrary/vm-builds/ubuntu-26
 # Rocky 10 systemd managed-node image (no Ansible installed)
 just build-rocky-docker           # builds ghcr.io/pulibrary/vm-builds/rocky-10:dev
 just push-rocky-docker            # pushes ghcr.io/pulibrary/vm-builds/rocky-10:dev
+
+# AlmaLinux 10 systemd managed-node image (no Ansible installed)
+just build-almalinux-docker       # builds ghcr.io/pulibrary/vm-builds/almalinux-10:dev
+just push-almalinux-docker        # pushes ghcr.io/pulibrary/vm-builds/almalinux-10:dev
 
 # Push all Ubuntu releases at once
 just push-ubuntu-docker-all
@@ -463,6 +478,7 @@ docker pull ghcr.io/pulibrary/vm-builds/ubuntu-22.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-24.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/ubuntu-26.04:dev
 docker pull ghcr.io/pulibrary/vm-builds/rocky-10:dev
+docker pull ghcr.io/pulibrary/vm-builds/almalinux-10:dev
 ```
 
 To run with systemd inside the container (requires `--privileged` and cgroup mounts):
@@ -485,6 +501,15 @@ docker run --privileged \
   -v /tmp:/tmp \
   -d --name rocky-systemd \
   ghcr.io/pulibrary/vm-builds/rocky-10:dev
+
+# AlmaLinux
+docker run --privileged \
+  --cgroupns=host \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+  -v /run:/run \
+  -v /tmp:/tmp \
+  -d --name almalinux-systemd \
+  ghcr.io/pulibrary/vm-builds/almalinux-10:dev
 ```
 
 Inside the container you can then:
