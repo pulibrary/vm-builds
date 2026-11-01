@@ -11,6 +11,7 @@ ubuntu_aws_tpl := "builds/linux/ubuntu/linux-ubuntu-aws.pkr.hcl"
 ubuntu_gcp_tpl := "builds/linux/ubuntu/linux-ubuntu-gcp.pkr.hcl"
 rocky_qemu_tpl := "builds/linux/rocky/linux-rocky-qemu-cloudimg.pkr.hcl"
 rocky_aws_tpl := "builds/linux/rocky/linux-rocky-aws.pkr.hcl"
+almalinux_qemu_tpl := "builds/linux/almalinux/linux-almalinux-qemu-cloudimg.pkr.hcl"
 freebsd_gcp_tpl := "builds/bsd/freebsd/freebsd-15-gcp.pkr.hcl"
 
 
@@ -59,7 +60,10 @@ init-rocky-qemu:
 init-rocky-aws:
     packer init {{ rocky_aws_tpl }}
 
-init-all: init-jammy init-noble init-resolute init-xubuntu-jammy init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws
+init-almalinux-qemu:
+    packer init {{ almalinux_qemu_tpl }}
+
+init-all: init-jammy init-noble init-resolute init-xubuntu-jammy init-ubuntu-aws init-ubuntu-gcp init-rocky-qemu init-rocky-aws init-almalinux-qemu
     @echo "PACKER: All templates initialized."
 init-freebsd-gcp:
     packer init {{ freebsd_gcp_tpl }}
@@ -157,6 +161,12 @@ build-rocky-qemu export_ovf='true' debug='false' VARS='':
     [[ "{{ debug }}" == "true" ]] \
       && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }}  {{ rocky_qemu_tpl }} \
       || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ rocky_qemu_tpl }}
+
+build-almalinux-qemu export_ovf='true' debug='false' VARS='':
+    @echo "PACKER: Building AlmaLinux QEMU (export_ovf={{ export_ovf }}, debug={{ debug }})"
+    [[ "{{ debug }}" == "true" ]] \
+      && env PACKER_LOG=1 packer build -debug -force -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ almalinux_qemu_tpl }} \
+      || env PACKER_LOG=1 packer build -force        -var "export_ovf={{ export_ovf }}" {{ VARS }} {{ almalinux_qemu_tpl }}
 
 # Ubuntu AWS
 build-ubuntu-aws debug='false':
