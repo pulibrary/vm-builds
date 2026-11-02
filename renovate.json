@@ -43,6 +43,14 @@
       "enabled": false
     },
     {
+      "description": "The Rocky and AlmaLinux Dockerfiles look up their rpm pins in the EL10 repos, so a new EL major is moved to by hand; only refresh within the release",
+      "matchFileNames": ["docker/rocky/Dockerfile", "docker/almalinux/Dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["rockylinux/rockylinux", "almalinux"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "Look up the Ubuntu 22.04 image's apt pins in jammy and its update pockets",
       "matchFileNames": ["docker/ubuntu/22.04/Dockerfile"],
       "matchDatasources": ["deb"],
@@ -73,12 +81,11 @@
       ]
     },
     {
-      "description": "Only propose pip releases that still install on Ubuntu 22.04's Python 3.10",
+      "description": "Bump Ubuntu 22.04's pip on its own branch: once pip drops Python 3.10 the image build fails, and that must not hold back the grouped updates. Strict constraintsFiltering cannot guard this because Renovate's pep440 versioning has no range subset check, so it rejects every release that declares requires_python",
       "matchFileNames": ["docker/ubuntu/22.04/Dockerfile"],
       "matchDatasources": ["pypi"],
       "matchPackageNames": ["pip"],
-      "constraints": {"python": "=3.15.2"},
-      "constraintsFiltering": "strict"
+      "groupName": "pip for Ubuntu 22.04"
     }
   ]
 }
