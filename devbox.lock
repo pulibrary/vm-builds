@@ -160,8 +160,8 @@
       }
     },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
-      "last_modified": "2026-10-24T11:44:37Z",
-      "resolved": "github:NixOS/nixpkgs/d3b13ad75cc492690728f9307e443dec9ef9a20e?lastModified=1792842277&narHash=sha256-pGPnZGi8y9d76xNeracniXO3dsYVROEmMkMc8jD0Ihc%3D"
+      "last_modified": "2026-11-01T00:57:29Z",
+      "resolved": "github:NixOS/nixpkgs/d357a2b54f0b6dc4aeb4e993190a52cf151b6f24?lastModified=1793494649&narHash=sha256-Thn0OE71NF80ZfOMGCgJvKtbCcnnz0fToT%2Fqsvb%2FGtc%3D"
     },
     "google-cloud-sdk@591.0.0": {
       "last_modified": "2026-11-01T00:57:29Z",
@@ -352,8 +352,8 @@
       }
     },
     "qemu@11.1.2": {
-      "last_modified": "2026-10-24T11:44:37Z",
-      "resolved": "github:NixOS/nixpkgs/d3b13ad75cc492690728f9307e443dec9ef9a20e#qemu",
+      "last_modified": "2026-11-01T00:57:29Z",
+      "resolved": "github:NixOS/nixpkgs/d357a2b54f0b6dc4aeb4e993190a52cf151b6f24#qemu",
       "source": "devbox-search",
       "version": "11.1.2",
       "systems": {
@@ -361,59 +361,59 @@
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/dzdki5sj5nfd4z7j8v5qg5a5gg6lkxgc-qemu-11.1.2",
+              "path": "/nix/store/mhx9b0d9p8r1aclalgys7cxld1nhfiq0-qemu-11.1.2",
               "default": true
             },
             {
               "name": "doc",
-              "path": "/nix/store/6mahbmf2hiw9f95p4kfr7hvk8187bd2q-qemu-11.1.2-doc"
+              "path": "/nix/store/ycsfa4604v434k0xjkypvbr6cmkrz109-qemu-11.1.2-doc"
             }
           ],
-          "store_path": "/nix/store/dzdki5sj5nfd4z7j8v5qg5a5gg6lkxgc-qemu-11.1.2"
+          "store_path": "/nix/store/mhx9b0d9p8r1aclalgys7cxld1nhfiq0-qemu-11.1.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/12nnb0wdapbvbsnynlpn19fklmxdxdxg-qemu-11.1.2",
+              "path": "/nix/store/wcbj886509sv1l2j8mrs3jcz4666r8pm-qemu-11.1.2",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/zz9aab80aq2fygpal1r3vhzz2hs6n6bn-qemu-11.1.2-debug"
+              "path": "/nix/store/8ijznaqg2z8k5fkv8dyhcbm7zvqs4sl7-qemu-11.1.2-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/n5kn1g8wcyyyz1z4s66pff24ysibmmy2-qemu-11.1.2-doc"
+              "path": "/nix/store/ngdwk1lv9vwrz3lfv1hp0znr1pmyi877-qemu-11.1.2-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/w0ld1cawp6pz8xdjgmcl85qm18982nji-qemu-11.1.2-ga"
+              "path": "/nix/store/rv2m9hs69xr70vy71wpzax9kgszpa0g3-qemu-11.1.2-ga"
             }
           ],
-          "store_path": "/nix/store/12nnb0wdapbvbsnynlpn19fklmxdxdxg-qemu-11.1.2"
+          "store_path": "/nix/store/wcbj886509sv1l2j8mrs3jcz4666r8pm-qemu-11.1.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/cnwc2zbiwjn3mw9ds7bkr0f8vyyswj01-qemu-11.1.2",
+              "path": "/nix/store/bp9li432ba8adp47dr9z9y0hx56wn8v2-qemu-11.1.2",
               "default": true
             },
             {
               "name": "debug",
-              "path": "/nix/store/8r9drqzxshc5i4xp7km2wc0zipmy3fls-qemu-11.1.2-debug"
+              "path": "/nix/store/q3h08w5n4xxdb994hdw6pqyl857y08q9-qemu-11.1.2-debug"
             },
             {
               "name": "doc",
-              "path": "/nix/store/0hql4rlh4xw6rkli1i63cgsk2458gd6x-qemu-11.1.2-doc"
+              "path": "/nix/store/qwvg8yljhfka2h6y7n5903q8rh0dww72-qemu-11.1.2-doc"
             },
             {
               "name": "ga",
-              "path": "/nix/store/14glild0n3gav52k2nmdrh2v4z2xfdpz-qemu-11.1.2-ga"
+              "path": "/nix/store/qvyann47wwsqv19v75l0jqwmshbyhlhb-qemu-11.1.2-ga"
             }
           ],
-          "store_path": "/nix/store/cnwc2zbiwjn3mw9ds7bkr0f8vyyswj01-qemu-11.1.2"
+          "store_path": "/nix/store/bp9li432ba8adp47dr9z9y0hx56wn8v2-qemu-11.1.2"
         }
       }
     }
