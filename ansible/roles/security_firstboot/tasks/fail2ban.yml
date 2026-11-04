@@ -23,6 +23,13 @@
     - ansible_os_family == "RedHat"
     - ansible_distribution | lower == "rocky"
 
+- name: Enable CRB repo (AlmaLinux)
+  ansible.builtin.command: dnf config-manager --set-enabled crb
+  changed_when: false
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution | lower == "almalinux"
+
 - name: Install EPEL (RHEL/Rocky)
   ansible.builtin.yum:
     name: epel-release

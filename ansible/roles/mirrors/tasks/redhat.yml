@@ -3,9 +3,16 @@
   ansible.builtin.package:
     name:
       - dnf-plugins-core
-      - rocky-gpg-keys
     state: present
   when: ansible_pkg_mgr == 'dnf'
+
+- name: Ensure Rocky GPG keys present
+  ansible.builtin.package:
+    name: rocky-gpg-keys
+    state: present
+  when:
+    - ansible_pkg_mgr == 'dnf'
+    - ansible_distribution == 'Rocky'
 
 - name: Add PUL Rocky repo (preferred by low cost)
   ansible.builtin.template:
@@ -14,7 +21,7 @@
     owner: root
     group: root
     mode: '0644'
-  when: ansible_os_family == 'RedHat'
+  when: ansible_distribution == 'Rocky'
   notify: dnf clean
 
 - name: Build package metadata cache
