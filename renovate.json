@@ -29,10 +29,10 @@
       "rangeStrategy": "bump"
     },
     {
-      "description": "Only propose ansible-core releases this project's Python floor can install",
+      "description": "Hold ansible-core below 2.22 while the project supports Python 3.12: ansible-core 2.22 requires Python >= 3.13. Lift this together with requires-python",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["ansible-core"],
-      "ignoreUnstable": true
+      "allowedVersions": "<2.22"
     },
     {
       "description": "Each Ubuntu Dockerfile is tied to its release's package pins, so only refresh the base image digest",
