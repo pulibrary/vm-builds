@@ -204,6 +204,12 @@ variable "pack_ova" {
   default = false
 }
 
+// Proxmox VE disk: monolithicSparse VMDK that QEMU can import or run directly
+variable "export_proxmox" {
+  type    = bool
+  default = true
+}
+
 # Cloud-init transport
 variable "common_data_source" {
   type        = string
@@ -535,6 +541,12 @@ build {
       qemu-img convert -p -O vmdk -o subformat=streamOptimized "$SRC" "$D/$B.vmdk"
       qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
 
+      # Proxmox VE: QEMU treats streamOptimized VMDKs as read-only, so emit a
+      # monolithicSparse copy that `qm disk import` or directory storage can use.
+      if [ "${var.export_proxmox}" = "true" ]; then
+        qemu-img convert -p -O vmdk -o subformat=monolithicSparse "$SRC" "$D/$B-proxmox.vmdk"
+      fi
+
       if [ "${var.compress_qcow2}" = "true" ]; then
         gzip -f -9 "$D/$B.qcow2"
       fi
@@ -676,13 +688,16 @@ OVF
 
   // Publish just the converted files (+ qcow2)
   post-processor "artifice" {
-    files = [
-      "${local.output_dir}/${local.qcow2_artifact}", # .qcow2 or .qcow2.gz
-      "${local.output_dir}/${local.vm_name}.vmdk",
-      "${local.output_dir}/${local.vm_name}.vhd",
-      # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
-      # "${local.output_dir}/${local.vm_name}.ova",
-    ]
+    files = concat(
+      [
+        "${local.output_dir}/${local.qcow2_artifact}", # .qcow2 or .qcow2.gz
+        "${local.output_dir}/${local.vm_name}.vmdk",
+        "${local.output_dir}/${local.vm_name}.vhd",
+        # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
+        # "${local.output_dir}/${local.vm_name}.ova",
+      ],
+      var.export_proxmox ? ["${local.output_dir}/${local.vm_name}-proxmox.vmdk"] : []
+    )
   }
 
   post-processor "checksum" {
