@@ -6,3 +6,7 @@
 - name: "{{ configure_task_name }}"
   ansible.builtin.include_tasks: windows.yml
   when: ansible_os_family == "Windows"
+
+- name: Building a generic initramfs.
+  ansible.builtin.include_tasks: initramfs.yml
+  when: ansible_os_family in ['Debian', 'RedHat']
