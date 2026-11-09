@@ -11,6 +11,7 @@ base_additional_packages:
     - git
     - net-tools
     - open-vm-tools
+    - qemu-guest-agent
     - unzip
     - wget
 
@@ -23,6 +24,7 @@ base_additional_packages:
     - kernel-headers
     - net-tools
     - open-vm-tools
+    - qemu-guest-agent
     - unzip
     - vim
     - wget

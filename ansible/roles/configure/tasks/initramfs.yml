@@ -1,0 +1,34 @@
+---
+# Tasks for building a hypervisor-agnostic initramfs on dracut systems.
+
+- name: Checking for dracut.
+  ansible.builtin.stat:
+    path: /usr/bin/dracut
+  register: configure_dracut
+
+- name: Building a generic initramfs.
+  when: configure_dracut.stat.exists
+  block:
+    - name: Configuring dracut to include VMware and Proxmox VE disk drivers.
+      ansible.builtin.copy:
+        src: 90-vm-builds-generic.conf
+        dest: /etc/dracut.conf.d/90-vm-builds-generic.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    # Rebuild in place for every installed kernel. Ubuntu names the image
+    # initrd.img-<kver>, EL names it initramfs-<kver>.img.
+    - name: Regenerating the initramfs for all installed kernels.
+      ansible.builtin.shell: |
+        set -euo pipefail
+        for kver in $(ls -1 /lib/modules); do
+          if [ -e "/boot/initrd.img-$kver" ]; then
+            dracut --force "/boot/initrd.img-$kver" "$kver"
+          elif [ -e "/boot/initramfs-$kver.img" ]; then
+            dracut --force "/boot/initramfs-$kver.img" "$kver"
+          fi
+        done
+      args:
+        executable: /bin/bash
+      changed_when: true

@@ -139,3 +139,12 @@
     - name: Prune any existing extra rescue images now
       ansible.builtin.command: /usr/local/sbin/boot-prune-rescue
       changed_when: false
+
+# The QEMU guest agent is the Proxmox VE counterpart to open-vm-tools. Both are
+# installed so one image works on either hypervisor; each only starts when its
+# hypervisor's device is present. On EL the unit is wanted by the virtio port
+# device and must be enabled. Ubuntu's unit is static and started by udev.
+- name: Enabling the QEMU guest agent.
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    enabled: true
