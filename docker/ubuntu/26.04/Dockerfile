@@ -3,7 +3,7 @@
 # Each Ubuntu release has its own Dockerfile so it can pin the package
 # versions that exist in that release. The base image is pinned by tag and
 # digest; Renovate proposes updates to both.
-FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
+FROM ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96
 
 # Links the published image to this repository in GHCR. Without the link the
 # package keeps the permissions of whoever pushed it first by hand, and the
