@@ -2,7 +2,7 @@
 # syntax = docker/dockerfile:1.4
 # Docker Official "almalinux" image. The tag and digest are pinned so a rebuild
 # is reproducible, and Renovate proposes both when AlmaLinux publishes.
-FROM almalinux:10.2@sha256:5a4b41a427c9717be8f4ac2a32aa22efbae5f9124fbcb79a6765394f312acfe8
+FROM almalinux:10.2@sha256:166e0a04bb27f55bcd65f3e891dcfe702846800e0600adaeef480c794e44107d
 
 # Links the published image to this repository in GHCR. Without the link the
 # package keeps the permissions of whoever pushed it first by hand, and the
