@@ -266,41 +266,41 @@
         }
       }
     },
-    "packer@1.16.1": {
-      "last_modified": "2026-10-27T21:33:45Z",
-      "resolved": "github:NixOS/nixpkgs/f05535a0efcb2134c478d1e88434fadf486d42b5#packer",
+    "packer@1.16.2": {
+      "last_modified": "2026-11-15T01:20:14Z",
+      "resolved": "github:NixOS/nixpkgs/1c872b8c508bbbfebc1b0b74777ff391ce0a574c#packer",
       "source": "devbox-search",
-      "version": "1.16.1",
+      "version": "1.16.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/h0a7m8gag83mgxyya13mkkybzvj5isxv-packer-1.16.1",
+              "path": "/nix/store/51km3jpfq1wkcb5vj4h9iwlf5xprgj0z-packer-1.16.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/h0a7m8gag83mgxyya13mkkybzvj5isxv-packer-1.16.1"
+          "store_path": "/nix/store/51km3jpfq1wkcb5vj4h9iwlf5xprgj0z-packer-1.16.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/raqviqnivwnzidzvbi539qxlhygk4n8n-packer-1.16.1",
+              "path": "/nix/store/qzcmykyiawi0jpynslxqy9h6nih9yv4h-packer-1.16.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/raqviqnivwnzidzvbi539qxlhygk4n8n-packer-1.16.1"
+          "store_path": "/nix/store/qzcmykyiawi0jpynslxqy9h6nih9yv4h-packer-1.16.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/83sx834ldsn40lbm67d7i8s8avpp1i8i-packer-1.16.1",
+              "path": "/nix/store/q7n9qrp315sn97n22yidybkmvhkfp44v-packer-1.16.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/83sx834ldsn40lbm67d7i8s8avpp1i8i-packer-1.16.1"
+          "store_path": "/nix/store/q7n9qrp315sn97n22yidybkmvhkfp44v-packer-1.16.2"
         }
       }
     },
