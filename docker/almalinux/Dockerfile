@@ -2,7 +2,7 @@
 # syntax = docker/dockerfile:1.4
 # Docker Official "almalinux" image. The tag and digest are pinned so a rebuild
 # is reproducible, and Renovate proposes both when AlmaLinux publishes.
-FROM almalinux:10.2@sha256:5a4b41a427c9717be8f4ac2a32aa22efbae5f9124fbcb79a6765394f312acfe8
+FROM almalinux:10.3@sha256:ccf217024b3d5e268cc208d1edb384a1edee6359370cf6ea1ecbc42254e57375
 
 # Links the published image to this repository in GHCR. Without the link the
 # package keeps the permissions of whoever pushed it first by hand, and the
@@ -13,23 +13,23 @@ ENV TZ=UTC \
     container=docker
 
 # renovate: datasource=rpm depName=systemd versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG SYSTEMD_VERSION=257-23.el10_2.2.alma.1
+ARG SYSTEMD_VERSION=257-33.el10.alma.2
 # renovate: datasource=rpm depName=sudo versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG SUDO_VERSION=1.9.17-10.p2.el10_2.7
+ARG SUDO_VERSION=1.9.17-10.p2.el10_3.13
 # renovate: datasource=rpm depName=openssh-server versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG OPENSSH_SERVER_VERSION=9.9p1-29.el10_2.alma.1
+ARG OPENSSH_SERVER_VERSION=9.9p1-33.el10_3.alma.1
 # renovate: datasource=rpm depName=net-tools versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
 ARG NET_TOOLS_VERSION=2.0-0.73.20160912git.el10
 # renovate: datasource=rpm depName=ca-certificates versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
 ARG CA_CERTIFICATES_VERSION=2026.2.92_v9.0.319-100.3.el10_2
 # renovate: datasource=rpm depName=python3 versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG PYTHON3_VERSION=3.12.15-1.el10_2
+ARG PYTHON3_VERSION=3.12.16-2.el10_3
 # renovate: datasource=rpm depName=python3-pip versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/AppStream/x86_64/os/repodata/
 ARG PYTHON3_PIP_VERSION=23.3.2-11.el10_2
 # renovate: datasource=rpm depName=python3-dnf versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG PYTHON3_DNF_VERSION=4.20.0-22.el10_2.alma.1
+ARG PYTHON3_DNF_VERSION=4.20.0-28.el10.alma.1
 # renovate: datasource=rpm depName=gnupg2 versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG GNUPG2_VERSION=2.4.5-4.el10_1
+ARG GNUPG2_VERSION=2.4.5-5.el10
 
 # Everything is one layer, and the package set mirrors the Ubuntu image.
 #

@@ -3,7 +3,7 @@
 # The Docker Official "rockylinux" image stopped at 9.3; Rocky publishes
 # current releases as rockylinux/rockylinux. The tag and digest are pinned so a
 # rebuild is reproducible, and Renovate proposes both when Rocky publishes.
-FROM rockylinux/rockylinux:10.2@sha256:827d37bc128288ccf160ee318bb3cb92d591164cb217e92f8bc61e3982ae1834
+FROM rockylinux/rockylinux:10.3@sha256:d24beedc58f79b9e0e9289fedaa4fcbcbe692b1438883a86f177fd7c51053ca8
 
 # Links the published image to this repository in GHCR. Without the link the
 # package keeps the permissions of whoever pushed it first by hand, and the
@@ -14,23 +14,23 @@ ENV TZ=UTC \
     container=docker
 
 # renovate: datasource=rpm depName=systemd versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG SYSTEMD_VERSION=257-23.el10_2.2.rocky.0.1
+ARG SYSTEMD_VERSION=257-33.el10.rocky.0.1
 # renovate: datasource=rpm depName=sudo versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG SUDO_VERSION=1.9.17-10.p2.el10_2.7
+ARG SUDO_VERSION=1.9.17-10.p2.el10_3.13
 # renovate: datasource=rpm depName=openssh-server versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG OPENSSH_SERVER_VERSION=9.9p1-29.el10_2.rocky.0.1
+ARG OPENSSH_SERVER_VERSION=9.9p1-33.el10_3.rocky.0.1
 # renovate: datasource=rpm depName=net-tools versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG NET_TOOLS_VERSION=2.0-0.73.20160912git.el10
 # renovate: datasource=rpm depName=ca-certificates versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
 ARG CA_CERTIFICATES_VERSION=2026.2.92_v9.0.319-100.3.el10_2
 # renovate: datasource=rpm depName=python3 versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG PYTHON3_VERSION=3.12.15-1.el10_2
+ARG PYTHON3_VERSION=3.12.16-2.el10_3
 # renovate: datasource=rpm depName=python3-pip versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/AppStream/x86_64/os/repodata/
 ARG PYTHON3_PIP_VERSION=23.3.2-11.el10_2
 # renovate: datasource=rpm depName=python3-dnf versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG PYTHON3_DNF_VERSION=4.20.0-22.el10_2.rocky.0.1
+ARG PYTHON3_DNF_VERSION=4.20.0-28.el10.rocky.0.1
 # renovate: datasource=rpm depName=gnupg2 versioning=rpm registryUrl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/repodata/
-ARG GNUPG2_VERSION=2.4.5-4.el10_1
+ARG GNUPG2_VERSION=2.4.5-5.el10
 
 # Everything is one layer, and the package set mirrors the Ubuntu image.
 #
