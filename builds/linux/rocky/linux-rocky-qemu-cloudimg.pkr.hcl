@@ -453,11 +453,13 @@ source "qemu" "linux-rocky-cloudimg" {
   qemu_binary  = var.qemu_binary
   machine_type = var.qemu_machine_type
 
-  cpus           = var.vm_cpu_count
-  memory         = var.vm_mem_size
-  disk_size      = var.vm_disk_size
-  format         = var.qemu_disk_format
-  disk_interface = var.qemu_disk_interface
+  cpus               = var.vm_cpu_count
+  memory             = var.vm_mem_size
+  disk_size          = var.vm_disk_size
+  format             = var.qemu_disk_format
+  disk_interface     = var.qemu_disk_interface
+  disk_discard       = "unmap"
+  disk_detect_zeroes = "unmap"
 
   net_device = var.qemu_net_device
 

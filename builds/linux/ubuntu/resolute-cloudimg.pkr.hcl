@@ -517,11 +517,13 @@ source "qemu" "linux-ubuntu-cloudimg" {
   // firmware  = local.qemu_firmware // this is a mess because of arm and intel archs avoid these dragons
 
   // Resources (Packer can resize a cloud image when disk_image=true)
-  cpus           = var.vm_cpu_count
-  memory         = var.vm_mem_size
-  disk_size      = var.vm_disk_size
-  format         = var.qemu_disk_format
-  disk_interface = var.qemu_disk_interface
+  cpus               = var.vm_cpu_count
+  memory             = var.vm_mem_size
+  disk_size          = var.vm_disk_size
+  format             = var.qemu_disk_format
+  disk_interface     = var.qemu_disk_interface
+  disk_discard       = "unmap"
+  disk_detect_zeroes = "unmap"
 
   // Network device
   net_device = var.qemu_net_device
