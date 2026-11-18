@@ -202,7 +202,7 @@ variable "pack_ova" {
   default = false
 } // tar to .ova
 
-// Proxmox VE disk: monolithicSparse VMDK that QEMU can import or run directly
+// Proxmox VE disk: zstd-compressed qcow2 that `qm disk import` reads directly
 variable "export_proxmox" {
   type    = bool
   default = true
@@ -588,9 +588,10 @@ build {
       qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
 
       # Proxmox VE: QEMU treats streamOptimized VMDKs as read-only, so emit a
-      # monolithicSparse copy that `qm disk import` or directory storage can use.
+      # qcow2 for `qm disk import`. Compressed clusters keep the scp small; the
+      # import writes them out uncompressed on the target storage.
       if [ "${var.export_proxmox}" = "true" ]; then
-        qemu-img convert -p -O vmdk -o subformat=monolithicSparse "$SRC" "$D/$B-proxmox.vmdk"
+        qemu-img convert -p -c -O qcow2 -o compression_type=zstd "$SRC" "$D/$B-proxmox.qcow2"
       fi
 
       # gzip qcow2 (after we've created it)
@@ -748,7 +749,7 @@ build {
         "${local.output_dir}/${local.vm_name}.vmdk",
         "${local.output_dir}/${local.vm_name}.vhd",
       ],
-      var.export_proxmox ? ["${local.output_dir}/${local.vm_name}-proxmox.vmdk"] : [],
+      var.export_proxmox ? ["${local.output_dir}/${local.vm_name}-proxmox.qcow2"] : [],
       var.pack_ova ? ["${local.output_dir}/${local.vm_name}.ova"] : []
     )
   }
