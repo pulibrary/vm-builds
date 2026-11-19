@@ -57,8 +57,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # droast ignore=DF004
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       systemd=255.4-1ubuntu8.18 \
-       systemd-sysv=255.4-1ubuntu8.18 \
+       systemd=255.4-1ubuntu8.19 \
+       systemd-sysv=255.4-1ubuntu8.19 \
        sudo=1.9.15p5-3ubuntu5.24.04.4 \
        openssh-server=1:9.6p1-3ubuntu13.20 \
        net-tools=2.10-0.1ubuntu4.4 \
