@@ -8,3 +8,9 @@
   when:
     - ansible_os_family in ['Debian', 'RedHat']
     - (cleanup_final_image | default(false) | bool)
+
+- name: Reclaim free disk space
+  ansible.builtin.include_tasks: reclaim.yml
+  when:
+    - ansible_os_family in ['Debian', 'RedHat']
+    - (cleanup_final_image | default(false) | bool)

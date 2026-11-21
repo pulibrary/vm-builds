@@ -244,7 +244,7 @@ variable "pack_ova" {
   default = false
 }
 
-// Proxmox VE disk: monolithicSparse VMDK that QEMU can import or run directly
+// Proxmox VE disk: zstd-compressed qcow2 that `qm disk import` reads directly
 variable "export_proxmox" {
   type    = bool
   default = true
@@ -517,11 +517,13 @@ source "qemu" "linux-ubuntu-cloudimg" {
   // firmware  = local.qemu_firmware // this is a mess because of arm and intel archs avoid these dragons
 
   // Resources (Packer can resize a cloud image when disk_image=true)
-  cpus           = var.vm_cpu_count
-  memory         = var.vm_mem_size
-  disk_size      = var.vm_disk_size
-  format         = var.qemu_disk_format
-  disk_interface = var.qemu_disk_interface
+  cpus               = var.vm_cpu_count
+  memory             = var.vm_mem_size
+  disk_size          = var.vm_disk_size
+  format             = var.qemu_disk_format
+  disk_interface     = var.qemu_disk_interface
+  disk_discard       = "unmap"
+  disk_detect_zeroes = "unmap"
 
   // Network device
   net_device = var.qemu_net_device
@@ -640,9 +642,10 @@ build {
       qemu-img convert -p -O vpc  -o subformat=dynamic        "$SRC" "$D/$B.vhd"
 
       # Proxmox VE: QEMU treats streamOptimized VMDKs as read-only, so emit a
-      # monolithicSparse copy that `qm disk import` or directory storage can use.
+      # qcow2 for `qm disk import`. Compressed clusters keep the scp small; the
+      # import writes them out uncompressed on the target storage.
       if [ "${var.export_proxmox}" = "true" ]; then
-        qemu-img convert -p -O vmdk -o subformat=monolithicSparse "$SRC" "$D/$B-proxmox.vmdk"
+        qemu-img convert -p -c -O qcow2 -o compression_type=zstd "$SRC" "$D/$B-proxmox.qcow2"
       fi
 
       # gzip qcow2 (after we've created it)
@@ -802,7 +805,7 @@ build {
         # we may want OVA for GCP to be part of the artifact set too, uncomment the next line:
         # "${local.output_dir}/${local.vm_name}.ova",
       ],
-      var.export_proxmox ? ["${local.output_dir}/${local.vm_name}-proxmox.vmdk"] : []
+      var.export_proxmox ? ["${local.output_dir}/${local.vm_name}-proxmox.qcow2"] : []
     )
   }
 

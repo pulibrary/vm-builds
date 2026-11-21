@@ -1,0 +1,27 @@
+---
+# Runs last so everything the earlier clean tasks deleted is released too.
+# The QEMU builds attach the disk with discard=unmap, so trimmed blocks are
+# dropped from the qcow2 and every exported image (including the Proxmox one)
+# comes out smaller.
+
+- name: Cleaning the apt package cache.
+  ansible.builtin.apt:
+    clean: true
+  when: ansible_os_family == 'Debian'
+
+- name: Cleaning the dnf package cache.
+  ansible.builtin.command: dnf clean all
+  changed_when: true
+  when: ansible_os_family == 'RedHat'
+
+# A size optimization only: hosts or disks without discard support should not
+# fail the build, so report the result instead.
+- name: Trimming free space on all mounted filesystems.
+  ansible.builtin.command: fstrim --all --verbose
+  register: clean_fstrim
+  changed_when: clean_fstrim.rc == 0
+  failed_when: false
+
+- name: Reporting the fstrim result.
+  ansible.builtin.debug:
+    var: clean_fstrim.stdout_lines if clean_fstrim.rc == 0 else clean_fstrim.stderr_lines
