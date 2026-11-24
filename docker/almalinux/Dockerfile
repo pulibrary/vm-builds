@@ -17,7 +17,7 @@ ARG SYSTEMD_VERSION=257-33.el10.alma.2
 # renovate: datasource=rpm depName=sudo versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
 ARG SUDO_VERSION=1.9.17-10.p2.el10_3.13
 # renovate: datasource=rpm depName=openssh-server versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
-ARG OPENSSH_SERVER_VERSION=9.9p1-33.el10_3.alma.1
+ARG OPENSSH_SERVER_VERSION=9.9p1-34.el10_3.alma.1
 # renovate: datasource=rpm depName=net-tools versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
 ARG NET_TOOLS_VERSION=2.0-0.73.20160912git.el10
 # renovate: datasource=rpm depName=ca-certificates versioning=rpm registryUrl=https://repo.almalinux.org/almalinux/10/BaseOS/x86_64/os/repodata/
